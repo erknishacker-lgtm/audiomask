@@ -24,17 +24,19 @@ import numpy as np
 class CloakParams:
     """Parâmetros do cloaker."""
 
-    # Nível da white copy relativo ao RMS da principal (dB). -22 a -30 típico.
-    decoy_db: float = -24.0
-    # Reforço da white na banda ASR (pré-ênfase leve)
-    decoy_pre_emphasis: float = 0.35
-    # Banda da fala para a white
-    f_lo: float = 250.0
-    f_hi: float = 3800.0
-    # Suavização do envelope (s)
-    env_smooth_s: float = 0.05
-    # Mistura mínima em silêncios (evita white sumir total)
-    floor: float = 0.08
+    # Nível white vs principal. Um pouco mais alto que -24 para STT "pegar" a white
+    # sem poluir o black (humano ainda ouve black dominante).
+    decoy_db: float = -20.0
+    # Reforço da white na banda ASR (pré-ênfase)
+    decoy_pre_emphasis: float = 0.55
+    # Banda da fala — STT prioriza
+    f_lo: float = 300.0
+    f_hi: float = 3400.0
+    env_smooth_s: float = 0.04
+    # Em silêncios da black, white sobe (STT prefere trechos limpos)
+    floor: float = 0.22
+    # Pico extra da white só em gaps da black
+    gap_boost: float = 1.8
     seed: int = 7
 
 
@@ -157,17 +159,18 @@ def aplicar_cloaker(
             dec
         )
 
-    # Envelope da principal (mascaramento)
-    env = envelope(main, sr, p.env_smooth_s)
-    env = np.maximum(env, p.floor)
+    # Envelope da principal: onde black é forte, white se esconde;
+    # onde black silencia, white sobe (melhor para STT ouvir a white).
+    env_main = envelope(main, sr, p.env_smooth_s)
+    inv = 1.0 - env_main
+    gate = np.clip(p.floor + inv * (p.gap_boost - p.floor), 0.05, 2.5)
 
-    # Normaliza decoy e aplica ganho alvo
     rms_m = float(np.sqrt(np.mean(main**2)) + 1e-12)
     rms_d = float(np.sqrt(np.mean(dec**2)) + 1e-12)
     ganho = (rms_m * (10.0 ** (p.decoy_db / 20.0))) / rms_d
-    white = dec * env * ganho
+    white = dec * gate * ganho
 
-    # Principal NÃO é distorcida aqui — 100% audível
+    # BLACK intocado em nível — só soma white mascarada
     out = main + white
     peak = float(np.max(np.abs(out)) + 1e-12)
     if peak > 0.99:
@@ -175,12 +178,15 @@ def aplicar_cloaker(
 
     meta = {
         "cloaker": True,
+        "engine": "dual_layer_ghostwave",
         "decoy_db": p.decoy_db,
         "rms_main": rms_m,
         "rms_white": float(np.sqrt(np.mean(white**2))),
         "snr_white_vs_main_db": float(
             10 * np.log10((rms_m**2) / (float(np.mean(white**2)) + 1e-12))
         ),
+        "human_layer": "original_black_preserved",
+        "ai_layer": "white_transcript_injected",
     }
     return out.astype(np.float32), meta
 

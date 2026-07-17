@@ -1,23 +1,19 @@
-# MASK.SOUND
+# GhostWave
 
 ## Register
-**product** — ferramenta de proteção de mídia (app/tool), não marketing site.
+**product** — ferramenta web de dual-layer de áudio para criativos de tráfego.
 
 ## Brand
-MASK.SOUND — logo ninja/máscara + cadeado + waveform ciano em fundo carvão.
+**GhostWave** — fantasma branco com waveform (logo PNG em fundo preto).  
+Nunca colocar logo dentro de botão com fundo colorido.
 
-## Users & purpose
-Profissionais e criadores que precisam aplicar proteção de áudio (e trilha de vídeo) com evidência objetiva: camadas DSP, download, relatório.
+## Pricing
+| Plano | Preço | Limite |
+|-------|-------|--------|
+| Free | R$ 0 | 2/dia |
+| Mensal | R$ 59,90 | 10/dia |
+| Trimestral | R$ 129,90 | 20/dia |
+| Anual | R$ 299,00 | ilimitado |
 
-Primary task: carregar mídia → aplicar proteção → validar → baixar.
-
-## Personality
-Preciso · discreto · técnico-confiante
-
-## Anti-references
-SaaS roxo com cards idênticos, glassmorphism decorativo, neon cyberpunk, “AI security” cliché verde-matrix.
-
-## Design principles
-1. A ferramenta some na tarefa: upload → proteger → baixar.
-2. Estado das 4 camadas sempre visível (aplicou / falhou / fallback).
-3. Contraste alto; densidade útil; zero decoração sem função.
+## Core promise
+Duas camadas: humano ouve black (original); STT tende a ler white (copy limpa).

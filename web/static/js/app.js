@@ -58,16 +58,20 @@
 
   function nav(extra = "") {
     const u = state.user;
+    const left = u.daily_left ?? u.videos_left;
+    const lim = u.daily_limit ?? u.video_limit;
     return `
       <nav class="nav">
-        <div class="brand" data-go="dashboard">
-          <img src="/assets/logo.png" alt="MASK.SOUND" />
-          <div class="brand-text">MASK<span>.SOUND</span></div>
+        <div class="brand" data-go="dashboard" title="GhostWave">
+          <img class="brand-logo" src="/assets/logo.png" alt="GhostWave" width="44" height="44" />
+          <div class="brand-text">GhostWave</div>
         </div>
         <div class="nav-right">
           ${langSelect()}
-          <span class="chip cyan">${(u.plan || "free").toUpperCase()}</span>
-          <span class="chip">${u.videos_left} ${t("left")}</span>
+          <button class="btn btn-ghost btn-sm" data-go="tutorials">Tutoriais</button>
+          <button class="btn btn-ghost btn-sm" data-go="pricing">Planos</button>
+          <span class="chip cyan">${(u.plan_name || u.plan || "free").toString()}</span>
+          <span class="chip">${left}/${lim} hoje</span>
           ${u.role === "admin" ? `<span class="chip admin">ADMIN</span>` : ""}
           <button class="btn btn-ghost btn-sm" id="btnLogout">${t("logout")}</button>
         </div>
@@ -124,9 +128,9 @@
     app.innerHTML = `
       <div class="auth-wrap fade-in">
         <div class="auth-card">
-          <img class="auth-logo" src="/assets/logo.png" alt="MASK.SOUND" />
-          <h1>MASK<span>.SOUND</span></h1>
-          <p class="sub">${t("tagline")}</p>
+          <img class="auth-logo" src="/assets/logo.png" alt="GhostWave" width="112" height="112" />
+          <h1>GhostWave</h1>
+          <p class="sub">Duas camadas. Duas realidades. O humano ouve o original; a IA lê a copy white.</p>
           <div style="text-align:center;margin-bottom:1rem">
             ${langSelect()}
           </div>
@@ -144,7 +148,7 @@
             <div class="field"><label>${t("password")}</label><input name="password" type="password" required minlength="6" autocomplete="${tab === "login" ? "current-password" : "new-password"}" /></div>
             <button class="btn btn-primary btn-block" type="submit">${tab === "login" ? t("login") : t("register")}</button>
           </form>
-          <p class="auth-foot">admin@audiomask.com · FREE 2 vídeos · PRO R$ 49,90</p>
+          <p class="auth-foot">2 grátis/dia · Mensal R$ 59,90 · Trimestral R$ 129,90 · Anual R$ 299</p>
         </div>
       </div>`;
     bindLang();
@@ -180,51 +184,76 @@
 
   function viewDashboard() {
     const u = state.user;
+    const left = u.daily_left ?? u.videos_left;
+    const lim = u.daily_limit ?? u.video_limit;
+    const usedToday = u.daily_used ?? 0;
     app.innerHTML = `
       <div class="shell fade-in">
         ${nav()}
-        <p class="kicker">${t("dashboard")}</p>
+        <p class="kicker">PAINEL</p>
         <h1 class="h1">${t("welcome")}, ${escapeHtml(u.name)}</h1>
-        <p class="lead">${t("tagline")}</p>
+        <p class="lead">Duas camadas. Duas realidades. Seu público ouve o criativo original; a IA de moderação tende a ler a copy white.</p>
+
+        <div class="dual-demo">
+          <div class="dual-box human">
+            <div class="who">CAMADA HUMANA</div>
+            <blockquote>“Compre agora com 50% off!”</blockquote>
+            <p style="margin:0.5rem 0 0;color:var(--muted);font-size:0.85rem">O que a pessoa ouve — áudio original, intacto.</p>
+          </div>
+          <div class="dual-box ai">
+            <div class="who">CAMADA IA (STT)</div>
+            <blockquote>“Dicas de jardinagem e flores sustentáveis.”</blockquote>
+            <p style="margin:0.5rem 0 0;color:var(--muted);font-size:0.85rem">O que a legenda/moderação tende a transcrever (copy white).</p>
+          </div>
+        </div>
 
         <div class="stats">
-          <div class="stat"><div class="lbl">${t("plan")}</div><div class="val">${(u.plan || "free").toUpperCase()}</div></div>
-          <div class="stat"><div class="lbl">${t("credits")}</div><div class="val">${u.videos_left} <span style="font-size:0.75rem;color:var(--muted)">${t("left")}</span></div></div>
-          <div class="stat"><div class="lbl">${t("used")}</div><div class="val">${u.videos_used}</div></div>
+          <div class="stat"><div class="lbl">${t("plan")}</div><div class="val" style="font-size:1.05rem">${escapeHtml(u.plan_name || u.plan || "free")}</div></div>
+          <div class="stat"><div class="lbl">Hoje</div><div class="val">${usedToday}/${lim}</div></div>
+          <div class="stat"><div class="lbl">Restam hoje</div><div class="val">${left}</div></div>
         </div>
 
         <div class="actions">
           <button class="action featured" data-go="protect">
             <span class="arrow">→</span>
             <div class="num">01</div>
-            <h3>${t("protect")}</h3>
-            <p>${t("protectDesc")}</p>
+            <h3>Proteger criativo</h3>
+            <p>Plataforma → funções dual-layer → upload → download. Como o líder do mercado, só que com fluxo GhostWave.</p>
           </button>
           <div style="display:flex;flex-direction:column;gap:1rem">
-            <button class="action" data-go="account" style="min-height:104px">
+            <button class="action" data-go="tutorials" style="min-height:100px">
               <div class="num">02</div>
+              <h3>Tutoriais (modo leigo)</h3>
+              <p>Entenda dual-layer sem jargão técnico.</p>
+            </button>
+            <button class="action" data-go="account" style="min-height:100px">
+              <div class="num">03</div>
               <h3>${t("account")}</h3>
-              <p>${t("accountDesc")}</p>
+              <p>Plano, créditos diários e assinatura.</p>
             </button>
             ${
               u.role === "admin"
-                ? `<button class="action" data-go="admin" style="min-height:104px">
-                    <div class="num">03</div>
+                ? `<button class="action" data-go="admin" style="min-height:100px">
+                    <div class="num">04</div>
                     <h3>${t("admin")}</h3>
-                    <p>${t("adminDesc")}</p>
+                    <p>Usuários, planos e cotas diárias.</p>
                   </button>`
-                : ""
+                : `<button class="action" data-go="pricing" style="min-height:100px">
+                    <div class="num">04</div>
+                    <h3>Planos</h3>
+                    <p>Mensal, trimestral e anual ilimitado.</p>
+                  </button>`
             }
           </div>
         </div>
 
         <div class="section">
-          <h2 class="h2">${t("layers")}</h2>
+          <h2 class="h2">Funções (iguais ao top do mercado — e além)</h2>
           <div class="layers">
-            <div class="layer"><span class="tag">C1</span><strong>${t("l1")}</strong><span>${t("l1d")}</span></div>
-            <div class="layer"><span class="tag">C2</span><strong>${t("l2")}</strong><span>${t("l2d")}</span></div>
-            <div class="layer"><span class="tag">C3</span><strong>${t("l3")}</strong><span>${t("l3d")}</span></div>
-            <div class="layer"><span class="tag">C4</span><strong>${t("l4")}</strong><span>${t("l4d")}</span></div>
+            <div class="layer"><span class="tag">01</span><strong>Dual-layer black → white</strong><span>Humano ouve black; white baixa para STT/moderação.</span></div>
+            <div class="layer"><span class="tag">02</span><strong>Limpar metadados</strong><span>Remove rastros digitais do arquivo.</span></div>
+            <div class="layer"><span class="tag">03</span><strong>Phase-stereo</strong><span>Proteção L/R invisível no downmix mono.</span></div>
+            <div class="layer"><span class="tag">04</span><strong>Compressão inteligente</strong><span>Vídeo menor sem perda visual perceptível.</span></div>
           </div>
         </div>
       </div>`;
@@ -240,39 +269,24 @@
         <h1 class="h1" style="margin-top:1rem">${t("account")}</h1>
         <div class="panel panel-pad" style="margin-top:1rem">
           <p><strong>${t("email")}:</strong> ${escapeHtml(u.email)}</p>
-          <p><strong>${t("plan")}:</strong> ${u.plan}</p>
-          <p><strong>${t("credits")}:</strong> ${u.videos_used} ${t("used")} / ${u.video_limit} · <span class="chip cyan">${u.videos_left} ${t("left")}</span></p>
+          <p><strong>${t("plan")}:</strong> ${escapeHtml(u.plan_name || u.plan)}</p>
+          <p><strong>Hoje:</strong> ${u.daily_used ?? 0}/${u.daily_limit ?? u.video_limit} · restam <span class="chip cyan">${u.daily_left ?? u.videos_left}</span></p>
+          <p style="color:var(--muted);font-size:0.85rem">Contador zera todo dia (UTC). Total histórico: ${u.videos_used}</p>
         </div>
         <div class="panel panel-pad" style="margin-top:1rem">
-          <h2 class="h2">${t("upgrade")}</h2>
-          <p class="lead" style="margin-bottom:1rem">${t("upgradeDesc")}</p>
-          <div style="font-family:var(--mono);font-size:1.6rem;color:var(--cyan);margin-bottom:1rem">R$ 49,90</div>
-          ${
-            u.plan !== "pro"
-              ? `<button class="btn btn-primary" id="btnPro">${t("requestPro")}</button>`
-              : `<span class="chip cyan">PRO ativo</span>`
-          }
+          <h2 class="h2">Assinar / mudar plano</h2>
+          <p class="lead">Pagamento manual por enquanto — peça no botão e o admin libera o plano.</p>
+          <button class="btn btn-primary" id="btnPro" data-go="pricing">Ver planos</button>
         </div>
         <div id="usageList" class="panel panel-pad" style="margin-top:1rem"></div>
       </div>`;
     bindNav();
-    const bp = $("#btnPro");
-    if (bp) {
-      bp.onclick = async () => {
-        try {
-          const r = await msApi.requestPro();
-          toast(r.message || "OK");
-        } catch (e) {
-          toast(e.message);
-        }
-      };
-    }
     msApi.usage().then((r) => {
       const box = $("#usageList");
       if (!box) return;
       const rows = r.usage || [];
       if (!rows.length) {
-        box.innerHTML = `<p class="lead" style="margin:0">—</p>`;
+        box.innerHTML = `<p class="lead" style="margin:0">Sem processamentos ainda.</p>`;
         return;
       }
       box.innerHTML =
@@ -285,6 +299,122 @@
           )
           .join("");
     });
+  }
+
+  function viewPricing() {
+    app.innerHTML = `
+      <div class="shell fade-in">
+        ${nav()}
+        <button class="btn btn-ghost btn-sm" data-go="dashboard">← ${t("back")}</button>
+        <h1 class="h1" style="margin-top:1rem">Planos GhostWave</h1>
+        <p class="lead">Comece grátis. Escalone quando a operação crescer.</p>
+        <div class="price-grid">
+          <div class="price-card">
+            <div class="chip">FREE</div>
+            <div class="price">R$ 0</div>
+            <ul>
+              <li>2 uploads por dia</li>
+              <li>Dual-layer black → white</li>
+              <li>Arquivos até 50 MB</li>
+            </ul>
+          </div>
+          <div class="price-card">
+            <div class="chip">MENSAL</div>
+            <div class="price">R$ 59,90<span style="font-size:0.8rem;color:var(--muted)">/mês</span></div>
+            <ul>
+              <li><strong>10 vídeos por dia</strong></li>
+              <li>Todas as 4 funções</li>
+              <li>Phase-stereo + metadados</li>
+            </ul>
+            <button class="btn btn-primary btn-block btn-sm" data-req="mensal">Quero Mensal</button>
+          </div>
+          <div class="price-card popular">
+            <div class="chip cyan">TRIMESTRAL · POPULAR</div>
+            <div class="price">R$ 129,90<span style="font-size:0.8rem;color:var(--muted)">/3 meses</span></div>
+            <ul>
+              <li><strong>20 vídeos por dia</strong></li>
+              <li>Todas as funções</li>
+              <li>Melhor custo/benefício</li>
+            </ul>
+            <button class="btn btn-primary btn-block btn-sm" data-req="trimestral">Quero Trimestral</button>
+          </div>
+          <div class="price-card">
+            <div class="chip">ANUAL</div>
+            <div class="price">R$ 299<span style="font-size:0.8rem;color:var(--muted)">/ano</span></div>
+            <ul>
+              <li><strong>Ilimitado</strong></li>
+              <li>Agências e times</li>
+              <li>Prioridade total</li>
+            </ul>
+            <button class="btn btn-primary btn-block btn-sm" data-req="anual">Quero Anual</button>
+          </div>
+        </div>
+        <p style="color:var(--muted);font-size:0.85rem">O botão registra o pedido na sua conta. O admin ativa o plano após o pagamento (PIX/cartão pode ser ligado depois).</p>
+      </div>`;
+    bindNav();
+    $$("[data-req]").forEach((b) => {
+      b.onclick = async () => {
+        try {
+          await msApi.requestPro();
+          toast("Pedido de plano " + b.dataset.req + " registrado. Admin libera em breve.");
+        } catch (e) {
+          toast(e.message);
+        }
+      };
+    });
+  }
+
+  function viewTutorials() {
+    app.innerHTML = `
+      <div class="shell fade-in">
+        ${nav()}
+        <button class="btn btn-ghost btn-sm" data-go="dashboard">← ${t("back")}</button>
+        <h1 class="h1" style="margin-top:1rem">Como funciona (modo leigo)</h1>
+        <p class="lead">Sem jargão. Pense no GhostWave como um <strong>envelope com duas cartas</strong> no mesmo pacote.</p>
+
+        <div class="tutorial-grid">
+          <div class="tutorial-card">
+            <h3>1. O problema</h3>
+            <p>Redes e editores (Meta, TikTok, CapCut) usam “ouvidos de robô” (IA) para legendar e moderar. Às vezes a copy do anúncio é agressiva demais para o robô — e o anúncio cai.</p>
+          </div>
+          <div class="tutorial-card">
+            <h3>2. A ideia dual-layer</h3>
+            <p><strong>Carta de cima (black):</strong> o que o ser humano ouve — seu criativo original, claro e natural.</p>
+            <p><strong>Carta de baixo (white):</strong> uma copy “limpa”, bem baixinha, moldada para o robô de legenda preferir ler ela.</p>
+          </div>
+          <div class="tutorial-card">
+            <h3>3. Analogia do apito e da festa</h3>
+            <p>Na festa (seu áudio alto), o sussurro white fica mascarado. O ouvido humano foca na festa. O software de transcrição, porém, “caça” trechos limpos de voz — e a white é fabricada para ser fácil de transcrever.</p>
+          </div>
+          <div class="tutorial-card">
+            <h3>4. Passo a passo no GhostWave</h3>
+            <ul>
+              <li>Escolha a <strong>plataforma</strong> (CapCut, TikTok, Meta…)</li>
+              <li>Marque as <strong>4 funções</strong> (cloaker, metadados, phase-stereo, compressão)</li>
+              <li>Cole a <strong>copy white</strong> (ou envie áudio white)</li>
+              <li>Envie o vídeo/áudio black e baixe o resultado</li>
+            </ul>
+          </div>
+          <div class="tutorial-card">
+            <h3>5. O que cada função faz</h3>
+            <ul>
+              <li><strong>Proteger áudio IA:</strong> dual-layer black + white</li>
+              <li><strong>Limpar metadados:</strong> apaga rastros do arquivo (software, GPS, tags)</li>
+              <li><strong>Phase-stereo:</strong> proteção extra L/R quase imperceptível</li>
+              <li><strong>Compressão:</strong> deixa o vídeo mais leve sem “pixelar” de propósito</li>
+            </ul>
+          </div>
+          <div class="tutorial-card">
+            <h3>6. Expectativa realista</h3>
+            <p>Nenhuma ferramenta no mundo garante 100% de aprovação para sempre — as IAs mudam. O GhostWave maximiza a chance: <strong>humano ouve black; máquina tende a white</strong>. Sempre teste a legenda na plataforma antes de escalar spend.</p>
+          </div>
+        </div>
+
+        <div class="row-actions">
+          <button class="btn btn-primary" data-go="protect">Proteger um criativo agora</button>
+        </div>
+      </div>`;
+    bindNav();
   }
 
   async function viewAdmin() {
@@ -351,7 +481,13 @@
             <select id="e_role"><option value="user" ${u.role === "user" ? "selected" : ""}>user</option><option value="admin" ${u.role === "admin" ? "selected" : ""}>admin</option></select>
           </div>
           <div class="field"><label>Plano</label>
-            <select id="e_plan"><option value="free" ${u.plan === "free" ? "selected" : ""}>free</option><option value="pro" ${u.plan === "pro" ? "selected" : ""}>pro</option></select>
+            <select id="e_plan">
+                      <option value="free" ${u.plan === "free" ? "selected" : ""}>free (2/dia)</option>
+                      <option value="mensal" ${u.plan === "mensal" ? "selected" : ""}>mensal (10/dia)</option>
+                      <option value="trimestral" ${u.plan === "trimestral" ? "selected" : ""}>trimestral (20/dia)</option>
+                      <option value="anual" ${u.plan === "anual" ? "selected" : ""}>anual (ilimitado)</option>
+                      <option value="pro" ${u.plan === "pro" ? "selected" : ""}>pro legado</option>
+                    </select>
           </div>
           <div class="field"><label>Limite</label><input id="e_limit" type="number" value="${u.video_limit}" /></div>
           <div class="field"><label>Usados</label><input id="e_used" type="number" value="${u.videos_used}" /></div>
@@ -676,6 +812,8 @@
     if (state.view === "account") return viewAccount();
     if (state.view === "admin") return viewAdmin();
     if (state.view === "protect") return viewProtect();
+    if (state.view === "tutorials") return viewTutorials();
+    if (state.view === "pricing") return viewPricing();
     return viewDashboard();
   }
 

@@ -33,7 +33,7 @@ if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
 from api.sessions import create_session, destroy_session, get_user_id
-from auth.db import PLANS, User, get_db
+from auth.db import PLANS, User, get_db  # noqa: F401 — PLANS used in /api/plans
 from core.pipeline_v2 import OpcoesProcessamento, processar_midia
 from ui.platforms import PLATFORMS
 from utils.audio_io import carregar_audio
@@ -43,7 +43,7 @@ WEB_DIR = os.path.join(ROOT, "web")
 OUTPUT_DIR = os.path.join(ROOT, "output")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-app = FastAPI(title="MASK.SOUND", version="2.0.0")
+app = FastAPI(title="GhostWave", version="3.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -147,7 +147,7 @@ def me(user: User = Depends(current_user)):
 def health():
     return {
         "ok": True,
-        "service": "mask.sound",
+        "service": "ghostwave",
         "ffmpeg": ffmpeg_disponivel(),
     }
 
@@ -169,18 +169,27 @@ def platforms():
     }
 
 
-@app.get("/api/plans")
-def plans():
-    return {"plans": PLANS}
-
-
 # ─── account ───────────────────────────────────────────────────────────────
 
 @app.post("/api/account/request-pro")
 def request_pro(user: User = Depends(current_user)):
-    note = (user.notes or "") + f"\n[pedido Pro {datetime.utcnow().isoformat()}]"
+    note = (user.notes or "") + f"\n[pedido plano {datetime.utcnow().isoformat()}]"
     get_db().update_user(user.id, notes=note.strip())
-    return {"ok": True, "message": "Pedido registrado. Admin pode ativar o Pro."}
+    return {
+        "ok": True,
+        "message": "Pedido registrado. O admin ativa mensal/trimestral/anual após pagamento.",
+    }
+
+
+@app.get("/api/plans")
+def list_plans_public():
+    return {
+        "plans": [
+            p
+            for p in PLANS.values()
+            if p.get("active", True) and p["id"] != "pro"
+        ]
+    }
 
 
 @app.get("/api/account/usage")
