@@ -302,19 +302,29 @@ async def process_media(
 
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         base = f"ms_{user.id}_{ts}"
-        db = float(decoy_db)
-        if db > -30.0:
-            db = -40.0
-        if db < -50.0:
-            db = -50.0
-        mode = (cloak_mode or "auto").strip().lower()
-        if mode not in ("auto", "natural", "redirect", "white_only"):
+        mode = (cloak_mode or "auto").strip().lower().replace("-", "_")
+        if mode in ("ads", "anti_analysis"):
+            mode = "anti_analise"
+        if mode not in ("auto", "natural", "redirect", "white_only", "anti_analise"):
             mode = "auto"
+        db = float(decoy_db)
+        if mode == "anti_analise":
+            # white um degrau mais presente que o residual natural
+            if db > -24.0 or db < -50.0:
+                db = -30.0
+            db = float(max(-36.0, min(-24.0, db)))
+            anti_db = db
+        else:
+            if db > -30.0:
+                db = -40.0
+            if db < -50.0:
+                db = -50.0
+            anti_db = -30.0
         blend = float(max(0.2, min(0.55, float(stt_blend))))
         opt = OpcoesProcessamento(
             proteger_audio_ia=_flag(opt_proteger),
-            limpar_metadados=_flag(opt_metadados),
-            phase_stereo=_flag(opt_phase),
+            limpar_metadados=_flag(opt_metadados) or mode == "anti_analise",
+            phase_stereo=_flag(opt_phase) or mode == "anti_analise",
             comprimir_video=_flag(opt_compress) and is_video,
             usar_cloaker=_flag(opt_proteger),
             decoy_db=db,
@@ -327,6 +337,8 @@ async def process_media(
             black_text_hint=(black_text or "").strip(),
             anti_ia_leve=False,
             platform=platform,
+            anti_decoy_db=anti_db,
+            micro_scramble=0.12 if mode == "anti_analise" else 0.0,
         )
 
         result = processar_midia(
@@ -362,7 +374,7 @@ async def process_media(
             },
             "report": {
                 "platform": platform,
-                "pipeline": "v4_stt_optimizer",
+                "pipeline": "v5_anti_analise",
                 "cloak_mode": mode,
                 "etapas": result.get("report", {}).get("etapas"),
                 "opcoes": result.get("report", {}).get("opcoes"),
@@ -370,7 +382,9 @@ async def process_media(
                 or result.get("report", {}).get("stt_preview"),
                 "nota": (
                     "auto = loop Whisper até white vencer black no score. "
-                    "white_only força white. natural = black limpa."
+                    "anti_analise = black normal + white sob mascaramento + micro-scramble "
+                    "(mira robô de ads; não garante aprovação). "
+                    "white_only força white. natural = black limpa + watermark."
                 ),
             },
             "stt_preview": result.get("stt_preview")

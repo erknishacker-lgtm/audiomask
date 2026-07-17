@@ -1,20 +1,21 @@
 """
 GhostWave dual-layer (cloaker black → white).
 
-VERDADE TÉCNICA (CapCut / TikTok legendas):
-  Se a black está alta, clara e inteligível, o CapCut SEMPRE prefere legendar a black.
-  Não existe truque open-source confiável de “humano ouve black e CapCut só ouve white”
-  sem degradar a black. Quem promete 100% costuma mentir ou destruir o áudio.
+VERDADE TÉCNICA:
+  Se a black está alta, clara e inteligível, extratores de fala (STT/ASR de ads)
+  tendem a ler a black. Não existe truque open-source confiável de
+  “humano ouve black e a IA só ouve white” sem degradar a black.
 
-O que fazemos de verdade:
-  - modo "natural" (padrão): black 100% intacta + white residual baixíssima (watermark).
-    Humano ouve perfeito. CapCut ainda legenda black — use para qualidade de anúncio.
-  - modo "redirect" (experimental): mistura espectral na banda STT.
-    Pode enganar ALGUNS sistemas fracos; CapCut costuma ainda acertar; áudio muda um pouco.
-  - modo "white_only": arquivo só com a copy white (CapCut legenda white; humano também ouve white).
+Modos:
+  - natural: black 100% + white residual baixíssima (watermark). Som perfeito.
+  - anti_analise: black principal + white dinâmica sob mascaramento + micro-scramble
+    leve na banda de voz. Mira robô de análise de ads (proxy Whisper), não legenda 100%.
+  - redirect: mistura espectral experimental na banda STT (pode alterar o áudio).
+  - white_only: só white (legenda e ouvido humanos seguem white).
 
-Use white_only quando o objetivo é “a legenda tem que ser a white”.
-Use natural quando o objetivo é “o anúncio tem que soar bem”.
+Use natural para qualidade máxima.
+Use anti_analise para tentar sujar a leitura da black sem estragar o anúncio.
+Use white_only quando o objetivo é a white ser o que se ouve/legenda.
 """
 
 from __future__ import annotations
@@ -29,9 +30,9 @@ import numpy as np
 class CloakParams:
     """Parâmetros do cloaker."""
 
-    # natural | redirect | white_only
+    # natural | anti_analise | redirect | white_only
     mode: str = "natural"
-    # residual white time-domain (só natural/redirect)
+    # residual white time-domain
     decoy_db: float = -40.0
     decoy_pre_emphasis: float = 0.5
     f_lo: float = 700.0
@@ -45,6 +46,9 @@ class CloakParams:
     floor: float = 0.05
     max_peak_ratio: float = 0.02
     seed: int = 7
+    # anti_analise: white sob picos da fala + micro-scramble de fase
+    micro_scramble: float = 0.12
+    mask_under_speech: float = 0.85  # 0..1 quanto a white sobe com o envelope da black
 
 
 def gerar_decoy_sintetico(
@@ -158,6 +162,89 @@ def _inject_quiet_white(
     return out
 
 
+def _inject_masked_white(
+    main: np.ndarray, white: np.ndarray, sr: int, p: CloakParams
+) -> np.ndarray:
+    """
+    White dinâmica sob a fala (mascaramento psicoacústico simples).
+
+    Diferente do residual natural: a white sobe JUNTO com o envelope da black
+    (onde o ouvido mascara melhor), ~-28..-32 dB RMS relativo — ainda quieta,
+    porém mais presente para extratores de fala do que -40 dB fixo.
+    """
+    dec = bandpass(white, sr, 280.0, 3800.0)
+    dec = pre_emphasis(dec, 0.85) * float(p.decoy_pre_emphasis) + dec * (
+        1.0 - float(p.decoy_pre_emphasis)
+    )
+    env = envelope(main, sr, p.env_smooth_s)
+    under = float(np.clip(p.mask_under_speech, 0.0, 1.0))
+    # gate alto sob fala (env), baixo no silêncio — evita white “sussurro solto”
+    gate = np.clip(p.floor + under * env + (1.0 - under) * 0.15, 0.04, 1.0)
+    rms_m = float(np.sqrt(np.mean(main**2)) + 1e-12)
+    rms_d = float(np.sqrt(np.mean(dec**2)) + 1e-12)
+    decoy = float(p.decoy_db)
+    # anti_analise padrão: um degrau acima do natural (-40)
+    if decoy <= -38.0:
+        decoy = -30.0
+    g = (rms_m * (10.0 ** (decoy / 20.0))) / rms_d
+    white_t = dec * gate * g
+    peak_m = float(np.max(np.abs(main)) + 1e-12)
+    # permite picos um pouco maiores que natural (ainda << black)
+    cap_ratio = max(float(p.max_peak_ratio), 0.06)
+    peak_w = float(np.max(np.abs(white_t)) + 1e-12)
+    cap = peak_m * cap_ratio
+    if peak_w > cap:
+        white_t *= cap / peak_w
+    out = main + white_t
+    peak = float(np.max(np.abs(out)) + 1e-12)
+    if peak > 0.99:
+        out *= 0.99 / peak
+    return out
+
+
+def _micro_scramble_stt_band(
+    main: np.ndarray,
+    sr: int,
+    p: CloakParams,
+    rng: np.random.Generator,
+) -> np.ndarray:
+    """
+    Micro-perturbação de fase na banda de voz (~700–3200 Hz).
+    Leve o bastante para anúncio; pode sujar ASR/embeddings.
+    """
+    scramble = float(np.clip(p.micro_scramble, 0.0, 0.28))
+    if scramble <= 1e-6:
+        return main
+    n_fft, hop = p.n_fft, p.hop
+    n = len(main)
+    if n < n_fft:
+        return main
+    window = np.hanning(n_fft)
+    freqs = np.fft.rfftfreq(n_fft, d=1.0 / sr)
+    mask = (freqs >= p.f_lo) & (freqs <= p.f_hi)
+    out = np.zeros(n)
+    norm = np.zeros(n)
+    for start in range(0, n - n_fft + 1, hop):
+        frame = main[start : start + n_fft] * window
+        s = np.fft.rfft(frame)
+        mag, ph = np.abs(s), np.angle(s)
+        ph2 = ph.copy()
+        ph2[mask] = ph[mask] + rng.uniform(-np.pi, np.pi, size=ph.shape)[mask] * scramble
+        # leve atenuação aleatória de magnitude na banda (muito sutil)
+        mag2 = mag.copy()
+        mag2[mask] *= 1.0 - 0.08 * scramble * rng.random(size=mag.shape)[mask]
+        recon = np.fft.irfft(mag2 * np.exp(1j * ph2), n=n_fft).real
+        out[start : start + n_fft] += recon * window
+        norm[start : start + n_fft] += window**2
+    norm = np.maximum(norm, 1e-8)
+    y = out / norm
+    y = np.where(norm < 1e-3, main, y)
+    rms_m = float(np.sqrt(np.mean(main**2)) + 1e-12)
+    rms_y = float(np.sqrt(np.mean(y**2)) + 1e-12)
+    y *= rms_m / rms_y
+    return y
+
+
 def _stft_redirect(
     main: np.ndarray,
     white: np.ndarray,
@@ -249,9 +336,65 @@ def aplicar_cloaker(
             "corr_vs_black": corr,
             "human_hears": "mostly_black",
             "capcut_likely_hears": "often_still_black",
+            "ads_robot_target": "uncertain",
             "nota": (
                 "Redirect experimental. CapCut moderno costuma AINDA legendar a black. "
                 "Se a legenda precisa ser white, use mode=white_only."
+            ),
+        }
+        peak = float(np.max(np.abs(y)) + 1e-12)
+        if peak > 0.99:
+            y *= 0.99 / peak
+        return y.astype(np.float32), meta
+
+    if mode in ("anti_analise", "anti-analise", "anti_analysis", "ads"):
+        # Black dona do áudio + white sob mascaramento + micro-scramble leve
+        p_aa = CloakParams(
+            mode="anti_analise",
+            decoy_db=p.decoy_db if p.decoy_db > -38 else -30.0,
+            decoy_pre_emphasis=p.decoy_pre_emphasis,
+            f_lo=p.f_lo,
+            f_hi=p.f_hi,
+            n_fft=p.n_fft,
+            hop=p.hop,
+            env_smooth_s=p.env_smooth_s,
+            floor=max(p.floor, 0.06),
+            max_peak_ratio=max(p.max_peak_ratio, 0.07),
+            seed=p.seed,
+            micro_scramble=p.micro_scramble if p.micro_scramble > 0 else 0.12,
+            mask_under_speech=p.mask_under_speech if p.mask_under_speech > 0 else 0.85,
+        )
+        y = _inject_masked_white(main, dec, sr, p_aa)
+        y = _micro_scramble_stt_band(y, sr, p_aa, rng)
+        # reforço residual bem baixo (watermark extra, quase inaudível)
+        y = _inject_quiet_white(
+            y,
+            dec,
+            sr,
+            CloakParams(
+                decoy_db=min(-38.0, p_aa.decoy_db - 8.0),
+                max_peak_ratio=0.025,
+                env_smooth_s=p_aa.env_smooth_s,
+                floor=0.03,
+                seed=p.seed + 3,
+            ),
+        )
+        corr = float(np.corrcoef(main, y)[0, 1]) if len(main) > 8 else 1.0
+        meta = {
+            "cloaker": True,
+            "engine": "anti_analise_masked_white_plus_micro_scramble",
+            "mode": "anti_analise",
+            "decoy_db": p_aa.decoy_db,
+            "micro_scramble": p_aa.micro_scramble,
+            "mask_under_speech": p_aa.mask_under_speech,
+            "corr_vs_black": corr,
+            "human_hears": "black",
+            "capcut_likely_hears": "mostly_black",
+            "ads_robot_target": "confuse_audio_extract",
+            "nota": (
+                "Anti-análise: black principal + white dinâmica sob a fala + "
+                "micro-scramble na banda de voz. Mira robô de ads (proxy STT), "
+                "não garante aprovação. Humano deve ouvir a black."
             ),
         }
         peak = float(np.max(np.abs(y)) + 1e-12)
@@ -270,10 +413,11 @@ def aplicar_cloaker(
         "corr_vs_black": corr,
         "human_hears": "black",
         "capcut_likely_hears": "black",
+        "ads_robot_target": "weak_watermark_only",
         "nota": (
             "Áudio black preservado (qualidade de anúncio). "
             "CapCut/TikTok VÃO legendar a black se ela for fala clara — "
-            "isso é normal. Para forçar legenda white, use white_only."
+            "isso é normal. Para tentar sujar análise de ads, use anti_analise."
         ),
     }
     return y.astype(np.float32), meta

@@ -18,8 +18,8 @@
         metadados: true,
         phase: true,
         compress: true,
-        decoyDb: -40,
-        cloakMode: "auto",
+        decoyDb: -30,
+        cloakMode: "anti_analise",
       },
     },
     authTab: "login",
@@ -98,8 +98,8 @@
               metadados: true,
               phase: true,
               compress: true,
-              decoyDb: -40,
-              cloakMode: "auto",
+              decoyDb: -30,
+              cloakMode: "anti_analise",
             },
           };
         }
@@ -576,12 +576,13 @@
       const o = w.opts;
       body = `
         <h1 class="h1">Funções do criativo</h1>
-        <p class="lead"><strong>Verdade:</strong> se a black está clara, o CapCut legenda a black. Não existe mágica que mantenha black perfeita e force 100% white no CapCut. Escolha o modo com honestidade:</p>
+        <p class="lead"><strong>Verdade:</strong> black clara → legenda/extrator ainda leem black. Não há mágica 100%. Para <em>robô de anúncios</em>, use Anti-análise (som ainda da black). Para legenda white, use White only.</p>
         <div class="panel panel-pad" style="margin-bottom:1rem">
           <div class="field"><label>Modo dual-layer</label>
             <select id="cloakMode">
-              <option value="auto" ${(o.cloakMode||'auto')==='auto'?'selected':''}>Auto (recomendado) — loop Whisper até white vencer no score</option>
-              <option value="natural" ${(o.cloakMode||'')==='natural'?'selected':''}>Natural — black 100% limpa (STT ainda pode ler black)</option>
+              <option value="anti_analise" ${(o.cloakMode||'')==='anti_analise'?'selected':''}>Anti-análise (recomendado p/ ads) — black normal + white mascarada + micro-scramble</option>
+              <option value="auto" ${(o.cloakMode||'auto')==='auto'?'selected':''}>Auto — loop Whisper até white vencer no score</option>
+              <option value="natural" ${(o.cloakMode||'')==='natural'?'selected':''}>Natural — black 100% limpa + watermark (STT ainda lê black)</option>
               <option value="white_only" ${(o.cloakMode||'')==='white_only'?'selected':''}>White only — legenda white (humano também ouve white)</option>
               <option value="redirect" ${(o.cloakMode||'')==='redirect'?'selected':''}>Redirect fixo (sem loop)</option>
             </select>
@@ -589,7 +590,7 @@
           <label class="field" style="display:flex;gap:0.75rem;align-items:flex-start;cursor:pointer">
             <input type="checkbox" id="opt_proteger" ${o.proteger ? "checked" : ""} style="margin-top:0.35rem;width:auto" />
             <span><strong>1 · Dual-layer / cloaker</strong><br/>
-            <span style="color:var(--muted);font-size:0.88rem">Aplica o modo escolhido acima (natural, white_only ou redirect).</span></span>
+            <span style="color:var(--muted);font-size:0.88rem">Aplica o modo escolhido (anti-análise, natural, white_only, auto ou redirect).</span></span>
           </label>
           <label class="field" style="display:flex;gap:0.75rem;align-items:flex-start;cursor:pointer">
             <input type="checkbox" id="opt_metadados" ${o.metadados ? "checked" : ""} style="margin-top:0.35rem;width:auto" />
@@ -619,10 +620,14 @@
           <div class="field"><label>Áudio white (opcional)</label>
             <input type="file" id="whiteFile" accept="audio/*,.wav,.mp3,.m4a" />
           </div>
-          <div class="field"><label>Volume residual white (dB) — só natural/redirect · padrão −40</label>
-            <input type="number" id="decoyDb" value="${o.decoyDb}" min="-50" max="-30" step="1" />
+          <div class="field"><label>Volume white (dB) — natural ~−40 · anti-análise ~−30 (padrão do modo)</label>
+            <input type="number" id="decoyDb" value="${o.decoyDb}" min="-50" max="-24" step="1" />
           </div>
-          <div class="hint"><strong>Quer que o CapCut legende a white?</strong> Use o modo <em>White only</em>. Quer anúncio bonito? Use <em>Natural</em> (a legenda do CapCut seguirá a black — isso é normal).</div>
+          <div class="hint">
+            <strong>Anti-análise:</strong> humano ouve a black; white sob a fala + micro-scramble (mira robô de ads — proxy Whisper, sem garantia).<br/>
+            <strong>White only:</strong> legenda/ouvido seguem a white.<br/>
+            <strong>Natural:</strong> anúncio limpo + watermark (extrator ainda lê black).
+          </div>
         </div>
         <div class="row-actions">
           <button class="btn btn-ghost" id="backPlat">← ${t("back")}</button>
@@ -826,8 +831,8 @@
               metadados: true,
               phase: true,
               compress: true,
-              decoyDb: -40,
-              cloakMode: "auto",
+              decoyDb: -30,
+              cloakMode: "anti_analise",
             },
           };
           render();

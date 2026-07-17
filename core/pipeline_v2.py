@@ -46,13 +46,16 @@ class OpcoesProcessamento:
     white_text: str = WHITE_COPY_DEFAULT
     black_text_hint: str = ""  # copy black para o score STT
     anti_ia_leve: bool = False
-    # auto = loop STT | natural | white_only | redirect
+    # auto | natural | white_only | redirect | anti_analise
     cloak_mode: str = "auto"
     stt_blend: float = 0.4
     black_scramble: float = 0.2
     optimize_stt: bool = True
     stt_max_attempts: int = 5
     platform: str = "capcut"
+    # anti_analise defaults
+    micro_scramble: float = 0.12
+    anti_decoy_db: float = -30.0
 
 
 def processar_midia(
@@ -85,11 +88,55 @@ def processar_midia(
         white_src = gerar_decoy_sintetico(opt.white_text, sr, duracao_s=len(y) / sr)
 
     stt_preview: Dict[str, Any] = {}
-    mode = (getattr(opt, "cloak_mode", "auto") or "auto").lower()
+    mode = (getattr(opt, "cloak_mode", "auto") or "auto").lower().replace("-", "_")
+    if mode in ("ads", "anti_analysis"):
+        mode = "anti_analise"
 
     if opt.proteger_audio_ia and opt.usar_cloaker and white_src is not None:
-        if mode in ("auto", "optimize") or getattr(opt, "optimize_stt", False):
-            # Loop: gera → Whisper → ajusta
+        if mode == "anti_analise":
+            # Loop de confusão (proxy robô de ads) — não exige white 100%
+            opt_res = optimize_dual_layer(
+                y,
+                sr,
+                opt.white_text or WHITE_COPY_DEFAULT,
+                white_audio=white_src,
+                black_text_hint=getattr(opt, "black_text_hint", "") or "",
+                config=OptimizeConfig(
+                    max_attempts=int(getattr(opt, "stt_max_attempts", 5) or 5),
+                    decoy_db=opt.decoy_db,
+                    anti_decoy_db=float(getattr(opt, "anti_decoy_db", -30.0) or -30.0),
+                    micro_scramble_start=float(getattr(opt, "micro_scramble", 0.12) or 0.12),
+                    language="pt",
+                    whisper_model="tiny",
+                    goal="anti_analise",
+                ),
+            )
+            y_work = opt_res.audio
+            report["etapas"].append({"cloaker_optimizer": opt_res.meta})
+            stt_preview = {
+                "stt_available": opt_res.stt_available,
+                "passed": opt_res.passed,
+                "winner": opt_res.winner,
+                "goal": "anti_analise",
+                "ai_heard": opt_res.final_transcript,
+                "white_text": opt.white_text,
+                "black_text_hint": getattr(opt, "black_text_hint", "") or "",
+                "attempts": len(opt_res.attempts),
+                "best_score": opt_res.meta.get("best_score"),
+                "honest_note": opt_res.meta.get("honest_note"),
+            }
+            # anti_analise: metadados e phase-stereo reforçados no pacote
+            if not opt.limpar_metadados:
+                opt.limpar_metadados = True
+                report["etapas"].append(
+                    {"metadados_forcado": "anti_analise_ativa_limpeza"}
+                )
+        elif mode in ("auto", "optimize") or (
+            getattr(opt, "optimize_stt", False) and mode not in (
+                "natural", "redirect", "white_only", "anti_analise"
+            )
+        ):
+            # Loop clássico: gera → Whisper → white vencer black
             opt_res = optimize_dual_layer(
                 y,
                 sr,
@@ -101,6 +148,7 @@ def processar_midia(
                     decoy_db=opt.decoy_db,
                     language="pt",
                     whisper_model="tiny",
+                    goal="white_win",
                 ),
             )
             y_work = opt_res.audio
@@ -109,6 +157,7 @@ def processar_midia(
                 "stt_available": opt_res.stt_available,
                 "passed": opt_res.passed,
                 "winner": opt_res.winner,
+                "goal": "white_win",
                 "ai_heard": opt_res.final_transcript,
                 "white_text": opt.white_text,
                 "black_text_hint": getattr(opt, "black_text_hint", "") or "",
@@ -116,25 +165,36 @@ def processar_midia(
                 "honest_note": opt_res.meta.get("honest_note"),
             }
         else:
+            fixed_mode = (
+                mode
+                if mode in ("natural", "redirect", "white_only", "anti_analise")
+                else "natural"
+            )
             y_mix, meta_c = aplicar_cloaker(
                 y,
                 white_src,
                 sr,
                 CloakParams(
-                    mode=mode if mode in ("natural", "redirect", "white_only") else "natural",
-                    decoy_db=opt.decoy_db,
+                    mode=fixed_mode,
+                    decoy_db=(
+                        float(getattr(opt, "anti_decoy_db", -30.0) or -30.0)
+                        if fixed_mode == "anti_analise"
+                        else opt.decoy_db
+                    ),
                     stt_blend=getattr(opt, "stt_blend", 0.4),
                     black_scramble=getattr(opt, "black_scramble", 0.2),
+                    micro_scramble=float(getattr(opt, "micro_scramble", 0.12) or 0.12),
                 ),
             )
             report["etapas"].append({"cloaker": meta_c})
             y_work = y_mix
             stt_preview = {
                 "stt_available": False,
-                "passed": mode == "white_only",
-                "winner": "white" if mode == "white_only" else "black",
+                "passed": fixed_mode == "white_only",
+                "winner": "white" if fixed_mode == "white_only" else "black",
+                "goal": fixed_mode,
                 "ai_heard": "",
-                "note": f"modo fixo={mode} (sem loop STT)",
+                "note": f"modo fixo={fixed_mode} (sem loop STT)",
             }
     else:
         y_work = y
@@ -156,11 +216,13 @@ def processar_midia(
     # Vídeo/CapCut usa downmix mono: white deve SOMAR nos canais (não cancelar).
     # Phase-stereo aqui reforça white em fase nos dois lados (L=R+payload baixo).
     if opt.phase_stereo and white_src is not None:
+        # anti_analise: side um pouco mais presente (ainda sutil) com white no payload
+        side_db = -30.0 if mode == "anti_analise" else -34.0
         stereo, meta_ps = mono_para_stereo_protegido(
             y_work,
             payload=white_src,
             sr=sr,
-            params=PhaseStereoParams(side_db=-34.0, invert_side=False),
+            params=PhaseStereoParams(side_db=side_db, invert_side=False),
         )
         try:
             import soundfile as sf

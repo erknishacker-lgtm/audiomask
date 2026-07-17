@@ -161,3 +161,75 @@ def score_dual_layer(
         if white_score > black_score
         else ("black" if black_score > white_score else "tie"),
     }
+
+
+def score_anti_analise(
+    transcript: str,
+    black_text: str,
+    white_text: str,
+    *,
+    corr_vs_black: float = 1.0,
+) -> Dict[str, Any]:
+    """
+    Score para modo anti-análise (robô de ads, não legenda 100% white).
+
+    Meta: transcrição “suja” — black menos limpa e/ou white misturada —
+    sem exigir que white vença. Penaliza áudio que destrói a black (corr baixa).
+
+    confusion_score alto = melhor para o objetivo de confusão.
+    passed se confusão razoável E qualidade humana (corr) aceitável.
+    """
+    base = score_dual_layer(transcript, black_text, white_text)
+    white_score = float(base["white_score"])
+    black_score = float(base["black_score"])
+    hyp_tokens = _tokens(transcript)
+    # texto curto/vazio ou poucas palavras úteis = extrator confuso
+    short_penalty = 1.0 if len(hyp_tokens) >= 4 else 0.55
+    # misturado: ambos presentes sem um dominar totalmente
+    mixed = white_score >= 0.06 and black_score >= 0.12 and abs(white_score - black_score) < 0.35
+    # black degradada na leitura
+    black_dirty = black_score < 0.45
+    # white apareceu no extrato
+    white_leak = white_score >= 0.08
+
+    confusion = (
+        (1.0 - black_score) * 0.45
+        + white_score * 0.30
+        + (0.15 if mixed else 0.0)
+        + (0.10 if black_dirty else 0.0)
+        + (0.05 if white_leak else 0.0)
+    ) * short_penalty
+
+    # qualidade humana: correlação com black original
+    corr = float(corr_vs_black)
+    quality_ok = corr >= 0.88
+    # “pass” anti-análise: confusão útil sem arruinar o áudio
+    passed = quality_ok and (
+        confusion >= 0.28
+        or mixed
+        or (black_dirty and white_leak)
+        or (black_score < 0.35 and corr >= 0.90)
+    )
+
+    if mixed:
+        winner = "mixed"
+    elif white_score > black_score + 0.05:
+        winner = "white"
+    elif black_score > white_score + 0.05:
+        winner = "black"
+    else:
+        winner = "tie"
+
+    return {
+        **base,
+        "mode": "anti_analise",
+        "confusion_score": round(float(confusion), 4),
+        "mixed": bool(mixed),
+        "black_dirty": bool(black_dirty),
+        "white_leak": bool(white_leak),
+        "corr_vs_black": round(corr, 4),
+        "quality_ok": bool(quality_ok),
+        "passed": bool(passed),
+        "winner": winner,
+        "goal": "confuse_ads_audio_extract_not_force_white_caption",
+    }
