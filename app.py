@@ -23,8 +23,8 @@ if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
 from auth.db import PLANS, User, get_db
-from core.camada4_adversarial import ParametrosAdversarial
-from core.pipeline import AudioShieldPipeline, PipelineConfig
+from core.pipeline import AudioShieldPipeline
+from core.presets_plataforma import config_para_plataforma, resumo_preset
 from i18n.translations import LANGS, get_lang, set_lang, t
 from ui.platforms import PLATFORMS, get_platform, icon_url
 from ui.styles import LOGO_PATH, inject as inject_styles, logo_data_uri
@@ -578,18 +578,17 @@ def page_encrypt(user: User) -> None:
                 if not fresh or not fresh.can_process:
                     st.error(t("no_credits"))
                     return
-                with st.spinner("…"):
+                with st.spinner(
+                    "Anti-legenda agressiva…"
+                    if get_lang() == "pt"
+                    else "Aggressive anti-caption…"
+                ):
                     try:
-                        cfg = PipelineConfig(
-                            adversarial=ParametrosAdversarial(usar_whisper=False)
-                        )
-                        # dicas por plataforma: desliga ultrassom em apps que destroem HF
-                        heavy = plat["id"] in ("tiktok", "kwai", "instagram", "whatsapp", "facebook")
-                        if heavy:
-                            cfg.ultrassom.volume_db = -48.0
-                            cfg.mascaramento.intensidade_db = -26.0
+                        # Preset por plataforma (CapCut/TikTok = anti-ASR forte na voz)
+                        cfg = config_para_plataforma(plat["id"])
                         pipe = AudioShieldPipeline(cfg)
                         yp, rel = pipe.processar(y, sr, cfg, nome_arquivo=nome)
+                        rel["preset_plataforma"] = resumo_preset(plat["id"])
                         out_video = None
                         if is_video and video_path:
                             out_dir = os.path.join(ROOT, "output")

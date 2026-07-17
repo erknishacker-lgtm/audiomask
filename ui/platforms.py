@@ -7,11 +7,18 @@ from typing import Dict, List
 # slug simpleicons / cor de marca
 PLATFORMS: List[Dict[str, str]] = [
     {
-        "id": "facebook",
-        "name": "Facebook",
-        "icon": "facebook",
-        "color": "1877F2",
-        "hint_key": "hint_facebook",
+        "id": "capcut",
+        "name": "CapCut",
+        "icon": "bytedance",
+        "color": "000000",
+        "hint_key": "hint_capcut",
+    },
+    {
+        "id": "tiktok",
+        "name": "TikTok",
+        "icon": "tiktok",
+        "color": "000000",
+        "hint_key": "hint_tiktok",
     },
     {
         "id": "instagram",
@@ -21,11 +28,11 @@ PLATFORMS: List[Dict[str, str]] = [
         "hint_key": "hint_instagram",
     },
     {
-        "id": "tiktok",
-        "name": "TikTok",
-        "icon": "tiktok",
-        "color": "000000",
-        "hint_key": "hint_tiktok",
+        "id": "facebook",
+        "name": "Facebook",
+        "icon": "facebook",
+        "color": "1877F2",
+        "hint_key": "hint_facebook",
     },
     {
         "id": "kwai",
@@ -56,18 +63,18 @@ PLATFORMS: List[Dict[str, str]] = [
         "hint_key": "hint_linkedin",
     },
     {
-        "id": "trello",
-        "name": "Trello",
-        "icon": "trello",
-        "color": "0052CC",
-        "hint_key": "hint_trello",
-    },
-    {
         "id": "whatsapp",
         "name": "WhatsApp",
         "icon": "whatsapp",
         "color": "25D366",
         "hint_key": "hint_whatsapp",
+    },
+    {
+        "id": "trello",
+        "name": "Trello",
+        "icon": "trello",
+        "color": "0052CC",
+        "hint_key": "hint_trello",
     },
 ]
 

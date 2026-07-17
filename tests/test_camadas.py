@@ -79,16 +79,18 @@ class TestCamada3(unittest.TestCase):
 
 
 class TestCamada4(unittest.TestCase):
-    def test_fallback_sem_whisper(self) -> None:
-        y = _sine()
+    def test_anti_asr_aplica(self) -> None:
+        y = _sine(300.0)
+        env = np.linspace(0.3, 1.0, len(y))
+        y = (y * env).astype(np.float32)
         out, meta = WatermarkingAdversarial(
-            ParametrosAdversarial(usar_whisper=False, epsilon_db=-60)
+            ParametrosAdversarial(usar_whisper=False, forca="aggressive")
         ).aplicar(y, SR)
         self.assertTrue(meta.get("aplicada"))
-        self.assertIn("fallback", meta.get("modo", ""))
-        # Perturbação muito pequena
-        max_d = float(np.max(np.abs(out - y)))
-        self.assertLess(max_d, 0.05)
+        self.assertIn("dsp_anti_asr", meta.get("modo", ""))
+        # Deve alterar o sinal de forma perceptível pelo ASR
+        max_d = float(np.max(np.abs(out.astype(np.float64) - y.astype(np.float64))))
+        self.assertGreater(max_d, 0.01)
 
 
 class TestPipeline(unittest.TestCase):
