@@ -42,10 +42,11 @@ class OpcoesProcessamento:
     comprimir_video: bool = True
     # Cloaker
     usar_cloaker: bool = True
-    decoy_db: float = -36.0  # imperceptível ao ouvido
+    decoy_db: float = -32.0  # residual time-domain baixo
     white_text: str = WHITE_COPY_DEFAULT
-    # Nunca distorcer black (imperceptibilidade humana)
     anti_ia_leve: bool = False
+    stt_blend: float = 0.52  # quanto da banda STT vem da white
+    black_scramble: float = 0.35  # embaralha black só na banda STT
     platform: str = "capcut"
 
 
@@ -80,7 +81,14 @@ def processar_midia(
 
     if opt.proteger_audio_ia and opt.usar_cloaker and white_src is not None:
         y_mix, meta_c = aplicar_cloaker(
-            y, white_src, sr, CloakParams(decoy_db=opt.decoy_db)
+            y,
+            white_src,
+            sr,
+            CloakParams(
+                decoy_db=opt.decoy_db,
+                stt_blend=getattr(opt, "stt_blend", 0.52),
+                black_scramble=getattr(opt, "black_scramble", 0.35),
+            ),
         )
         report["etapas"].append({"cloaker": meta_c})
         y_work = y_mix
@@ -101,12 +109,15 @@ def processar_midia(
     # 3) Phase-stereo
     audio_out_path = os.path.join(out_dir, f"{basename}.wav")
     stereo = None
-    if opt.phase_stereo:
-        payload = white_src if white_src is not None else None
+    # Vídeo/CapCut usa downmix mono: white deve SOMAR nos canais (não cancelar).
+    # Phase-stereo aqui reforça white em fase nos dois lados (L=R+payload baixo).
+    if opt.phase_stereo and white_src is not None:
         stereo, meta_ps = mono_para_stereo_protegido(
-            y_work, payload=payload, sr=sr, params=PhaseStereoParams(side_db=-30.0)
+            y_work,
+            payload=white_src,
+            sr=sr,
+            params=PhaseStereoParams(side_db=-34.0, invert_side=False),
         )
-        # salva stereo wav
         try:
             import soundfile as sf
 
@@ -114,7 +125,8 @@ def processar_midia(
         except Exception:
             salvar_audio(audio_out_path, y_work, sr)
         report["etapas"].append({"phase_stereo": meta_ps})
-        audio_for_mux = y_work  # remux atual é mono; phase fica no wav stereo baixável
+        # Mux do vídeo: mono dual-layer (é o que CapCut analisa)
+        audio_for_mux = y_work
     else:
         salvar_audio(audio_out_path, y_work, sr)
         report["etapas"].append({"phase_stereo": False})

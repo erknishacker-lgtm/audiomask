@@ -18,7 +18,7 @@
         metadados: true,
         phase: true,
         compress: true,
-        decoyDb: -36,
+        decoyDb: -32,
       },
     },
     authTab: "login",
@@ -97,7 +97,7 @@
               metadados: true,
               phase: true,
               compress: true,
-              decoyDb: -36,
+              decoyDb: -32,
             },
           };
         }
@@ -606,9 +606,10 @@
           <div class="field"><label>Áudio white (opcional)</label>
             <input type="file" id="whiteFile" accept="audio/*,.wav,.mp3,.m4a" />
           </div>
-          <div class="field"><label>Volume da white (dB) — padrão −36 (imperceptível). Máx. −28</label>
-            <input type="number" id="decoyDb" value="${o.decoyDb}" min="-48" max="-28" step="1" />
+          <div class="field"><label>Volume residual white (dB) — padrão −32 (baixo no ouvido)</label>
+            <input type="number" id="decoyDb" value="${o.decoyDb}" min="-45" max="-28" step="1" />
           </div>
+          <div class="hint">O redirect de legenda usa <strong>injeção espectral</strong> na faixa 700–3200 Hz (não só volume baixo). A black continua inteligível; a white entra na banda que o CapCut/STT prioriza.</div>
         </div>
         <div class="row-actions">
           <button class="btn btn-ghost" id="backPlat">← ${t("back")}</button>
@@ -703,7 +704,7 @@
           metadados: $("#opt_metadados").checked,
           phase: $("#opt_phase").checked,
           compress: $("#opt_compress").checked,
-          decoyDb: parseFloat($("#decoyDb").value || "-36"),
+          decoyDb: parseFloat($("#decoyDb").value || "-32"),
         };
         state.wizard.whiteText = $("#whiteText").value || "";
         const wf = $("#whiteFile").files[0];
@@ -809,7 +810,7 @@
               metadados: true,
               phase: true,
               compress: true,
-              decoyDb: -36,
+              decoyDb: -32,
             },
           };
           render();
