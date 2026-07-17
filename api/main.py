@@ -247,8 +247,9 @@ async def process_media(
     opt_metadados: str = Form("1"),
     opt_phase: str = Form("1"),
     opt_compress: str = Form("1"),
-    decoy_db: float = Form(-32.0),
-    stt_blend: float = Form(0.52),
+    decoy_db: float = Form(-40.0),
+    cloak_mode: str = Form("natural"),
+    stt_blend: float = Form(0.4),
     user: User = Depends(current_user),
 ):
     """
@@ -300,13 +301,15 @@ async def process_media(
 
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         base = f"ms_{user.id}_{ts}"
-        # Residual time-domain baixo; o redirect real é espectral (stt_blend)
         db = float(decoy_db)
-        if db > -28.0:
-            db = -32.0
-        if db < -45.0:
-            db = -45.0
-        blend = float(max(0.35, min(0.65, float(stt_blend))))
+        if db > -30.0:
+            db = -40.0
+        if db < -50.0:
+            db = -50.0
+        mode = (cloak_mode or "natural").strip().lower()
+        if mode not in ("natural", "redirect", "white_only"):
+            mode = "natural"
+        blend = float(max(0.2, min(0.55, float(stt_blend))))
         opt = OpcoesProcessamento(
             proteger_audio_ia=_flag(opt_proteger),
             limpar_metadados=_flag(opt_metadados),
@@ -314,8 +317,9 @@ async def process_media(
             comprimir_video=_flag(opt_compress) and is_video,
             usar_cloaker=_flag(opt_proteger),
             decoy_db=db,
+            cloak_mode=mode,
             stt_blend=blend,
-            black_scramble=0.35,
+            black_scramble=0.2,
             white_text=(white_text or "").strip()
             or "Oferta especial. Confira as condicoes oficiais no site. Produto com garantia e suporte.",
             anti_ia_leve=False,
@@ -355,12 +359,14 @@ async def process_media(
             },
             "report": {
                 "platform": platform,
-                "pipeline": "v2_cloaker",
+                "pipeline": "v3_honest_dual_layer",
+                "cloak_mode": mode,
                 "etapas": result.get("report", {}).get("etapas"),
                 "opcoes": result.get("report", {}).get("opcoes"),
                 "nota": (
-                    "Áudio principal (black) permanece audível. "
-                    "Copy white entra baixa para IA. Não é garantia 100% em todos os ASRs."
+                    "natural = black perfeito (CapCut legenda black). "
+                    "white_only = CapCut legenda white (humano também ouve white). "
+                    "redirect = experimental."
                 ),
             },
             "user": fresh2.to_dict() if fresh2 else None,

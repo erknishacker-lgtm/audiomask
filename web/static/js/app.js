@@ -18,7 +18,8 @@
         metadados: true,
         phase: true,
         compress: true,
-        decoyDb: -32,
+        decoyDb: -40,
+        cloakMode: "natural",
       },
     },
     authTab: "login",
@@ -97,7 +98,8 @@
               metadados: true,
               phase: true,
               compress: true,
-              decoyDb: -32,
+              decoyDb: -40,
+              cloakMode: "natural",
             },
           };
         }
@@ -574,12 +576,19 @@
       const o = w.opts;
       body = `
         <h1 class="h1">Funções do criativo</h1>
-        <p class="lead">Escolha o que aplicar. O áudio principal (black) permanece <strong>100% audível</strong>. A copy white entra baixa para as IAs de legenda.</p>
+        <p class="lead"><strong>Verdade:</strong> se a black está clara, o CapCut legenda a black. Não existe mágica que mantenha black perfeita e force 100% white no CapCut. Escolha o modo com honestidade:</p>
         <div class="panel panel-pad" style="margin-bottom:1rem">
+          <div class="field"><label>Modo dual-layer</label>
+            <select id="cloakMode">
+              <option value="natural" ${(o.cloakMode||'natural')==='natural'?'selected':''}>Natural — black 100% perfeita (CapCut ainda legenda black)</option>
+              <option value="white_only" ${(o.cloakMode||'')==='white_only'?'selected':''}>White only — CapCut legenda a white (você também ouve a white)</option>
+              <option value="redirect" ${(o.cloakMode||'')==='redirect'?'selected':''}>Redirect experimental — pode enganar alguns STT; áudio muda um pouco</option>
+            </select>
+          </div>
           <label class="field" style="display:flex;gap:0.75rem;align-items:flex-start;cursor:pointer">
             <input type="checkbox" id="opt_proteger" ${o.proteger ? "checked" : ""} style="margin-top:0.35rem;width:auto" />
-            <span><strong>1 · Proteger áudio contra IA (cloaker black → white)</strong><br/>
-            <span style="color:var(--muted);font-size:0.88rem">Mantém a voz do anúncio clara. Injeta copy “white” em volume baixo (mascarada) para a transcrição das plataformas.</span></span>
+            <span><strong>1 · Dual-layer / cloaker</strong><br/>
+            <span style="color:var(--muted);font-size:0.88rem">Aplica o modo escolhido acima (natural, white_only ou redirect).</span></span>
           </label>
           <label class="field" style="display:flex;gap:0.75rem;align-items:flex-start;cursor:pointer">
             <input type="checkbox" id="opt_metadados" ${o.metadados ? "checked" : ""} style="margin-top:0.35rem;width:auto" />
@@ -606,10 +615,10 @@
           <div class="field"><label>Áudio white (opcional)</label>
             <input type="file" id="whiteFile" accept="audio/*,.wav,.mp3,.m4a" />
           </div>
-          <div class="field"><label>Volume residual white (dB) — padrão −32 (baixo no ouvido)</label>
-            <input type="number" id="decoyDb" value="${o.decoyDb}" min="-45" max="-28" step="1" />
+          <div class="field"><label>Volume residual white (dB) — só natural/redirect · padrão −40</label>
+            <input type="number" id="decoyDb" value="${o.decoyDb}" min="-50" max="-30" step="1" />
           </div>
-          <div class="hint">O redirect de legenda usa <strong>injeção espectral</strong> na faixa 700–3200 Hz (não só volume baixo). A black continua inteligível; a white entra na banda que o CapCut/STT prioriza.</div>
+          <div class="hint"><strong>Quer que o CapCut legende a white?</strong> Use o modo <em>White only</em>. Quer anúncio bonito? Use <em>Natural</em> (a legenda do CapCut seguirá a black — isso é normal).</div>
         </div>
         <div class="row-actions">
           <button class="btn btn-ghost" id="backPlat">← ${t("back")}</button>
@@ -643,9 +652,9 @@
       body = `
         <h1 class="h1">${t("result")}</h1>
         <div class="hint" style="border-color:rgba(61,214,140,0.4);background:rgba(61,214,140,0.08)">
-          <strong>✓ Processamento concluído</strong> — áudio black preservado; white em volume imperceptível.
+          <strong>✓ Processamento concluído</strong>
         </div>
-        <p class="lead">Compare original vs protegido. A white não deve ser ouvida alto.</p>
+        <p class="lead">Compare original vs protegido. Se usou modo Natural, o CapCut ainda pode legendar a black — isso é esperado. Para forçar legenda white, processe de novo em <strong>White only</strong>.</p>
         <div class="compare">
           <div class="box">
             <h4>${t("original")}</h4>
@@ -704,7 +713,8 @@
           metadados: $("#opt_metadados").checked,
           phase: $("#opt_phase").checked,
           compress: $("#opt_compress").checked,
-          decoyDb: parseFloat($("#decoyDb").value || "-32"),
+          decoyDb: parseFloat($("#decoyDb").value || "-40"),
+          cloakMode: $("#cloakMode").value || "natural",
         };
         state.wizard.whiteText = $("#whiteText").value || "";
         const wf = $("#whiteFile").files[0];
@@ -810,7 +820,8 @@
               metadados: true,
               phase: true,
               compress: true,
-              decoyDb: -32,
+              decoyDb: -40,
+              cloakMode: "natural",
             },
           };
           render();

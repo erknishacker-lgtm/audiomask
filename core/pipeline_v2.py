@@ -42,11 +42,15 @@ class OpcoesProcessamento:
     comprimir_video: bool = True
     # Cloaker
     usar_cloaker: bool = True
-    decoy_db: float = -32.0  # residual time-domain baixo
+    decoy_db: float = -40.0
     white_text: str = WHITE_COPY_DEFAULT
     anti_ia_leve: bool = False
-    stt_blend: float = 0.52  # quanto da banda STT vem da white
-    black_scramble: float = 0.35  # embaralha black só na banda STT
+    # natural = black perfeito (CapCut ainda legenda black)
+    # white_only = CapCut legenda white (humano também ouve white)
+    # redirect = experimental (pode piorar som e CapCut ainda acerta)
+    cloak_mode: str = "natural"
+    stt_blend: float = 0.4
+    black_scramble: float = 0.2
     platform: str = "capcut"
 
 
@@ -85,9 +89,10 @@ def processar_midia(
             white_src,
             sr,
             CloakParams(
+                mode=getattr(opt, "cloak_mode", "natural") or "natural",
                 decoy_db=opt.decoy_db,
-                stt_blend=getattr(opt, "stt_blend", 0.52),
-                black_scramble=getattr(opt, "black_scramble", 0.35),
+                stt_blend=getattr(opt, "stt_blend", 0.4),
+                black_scramble=getattr(opt, "black_scramble", 0.2),
             ),
         )
         report["etapas"].append({"cloaker": meta_c})
