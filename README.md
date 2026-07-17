@@ -1,4 +1,6 @@
-# AudioMask / AudioShield — Proteção Invisível de Áudio
+# MASK.SOUND — Proteção Invisível de Áudio
+
+Marca: **MASK.SOUND** · logo em `assets/logo.png` · tema carvão + ciano (fundo escuro para o logo não sumir).
 
 ## Conta admin (padrão)
 

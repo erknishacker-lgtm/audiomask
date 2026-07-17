@@ -1,7 +1,10 @@
-# AudioShield
+# MASK.SOUND
 
 ## Register
 **product** — ferramenta de proteção de mídia (app/tool), não marketing site.
+
+## Brand
+MASK.SOUND — logo ninja/máscara + cadeado + waveform ciano em fundo carvão.
 
 ## Users & purpose
 Profissionais e criadores que precisam aplicar proteção de áudio (e trilha de vídeo) com evidência objetiva: camadas DSP, download, relatório.

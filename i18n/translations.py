@@ -8,8 +8,8 @@ LANGS = {"pt": "Português", "en": "English"}
 
 _STRINGS: Dict[str, Dict[str, str]] = {
     "pt": {
-        "app_name": "AudioMask",
-        "tagline": "Proteção invisível de áudio para vídeos e vozes",
+        "app_name": "MASK.SOUND",
+        "tagline": "Proteção invisível de áudio — máscara sonora para seus vídeos",
         "login": "Entrar",
         "register": "Criar conta",
         "logout": "Sair",
@@ -88,8 +88,8 @@ _STRINGS: Dict[str, Dict[str, str]] = {
         "fill_fields": "Preencha todos os campos.",
     },
     "en": {
-        "app_name": "AudioMask",
-        "tagline": "Invisible audio protection for videos and voice",
+        "app_name": "MASK.SOUND",
+        "tagline": "Invisible audio protection — a sound mask for your videos",
         "login": "Sign in",
         "register": "Create account",
         "logout": "Log out",

@@ -1,38 +1,37 @@
-# AudioShield Design System
+# MASK.SOUND Design System
+
+## Brand
+**MASK.SOUND** — logo: máscara com cadeado + waveform ciano/azul.
 
 ## Mood
-Signal lab at night — quiet instruments, indigo tooling on pure near-black.
+Signal intelligence night lab — electric cyan on charcoal.
 
 ## Color strategy
-**Restrained.** Accent ≤10% of surface. Primary for actions and active layer state only.
+**Restrained.** Accent cyan ≤12% of surface.
 
-## Palette (OKLCH → hex for Streamlit CSS)
+## Palette (from logo)
 
-| Role | OKLCH | Hex |
-|------|-------|-----|
-| bg | oklch(0.12 0 0) | `#141414` |
-| surface | oklch(0.17 0.008 270) | `#1c1c22` |
-| surface-2 | oklch(0.21 0.012 270) | `#252530` |
-| border | oklch(0.28 0.015 270) | `#343445` |
-| ink | oklch(0.96 0.005 270) | `#f2f2f7` |
-| muted | oklch(0.72 0.02 270) | `#a8a8b8` |
-| primary | oklch(0.55 0.18 275) | `#6b5cff` |
-| primary-hover | oklch(0.62 0.17 275) | `#8478ff` |
-| success | oklch(0.72 0.14 155) | `#3dd68c` |
-| warning | oklch(0.78 0.14 85) | `#e8b84a` |
-| danger | oklch(0.62 0.18 25) | `#e85d4c` |
+| Role | Hex | Use |
+|------|-----|-----|
+| bg | `#1B1C1E` | App background (matches logo plate) |
+| surface | `#25262A` | Cards / panels |
+| surface-2 | `#2E3035` | Secondary controls |
+| border | `#3A3C42` | 1px borders only |
+| ink | `#F2F4F7` | Body text |
+| muted | `#9AA0A8` | Secondary text |
+| cyan | `#2ECBFF` | Primary accent / glow |
+| cyan-deep | `#1A8CFF` | Gradient end / primary buttons |
+
+## Critical rules
+- **Never** put the logo on white/cream — the character is dark and disappears.
+- Logo always on charcoal `#1B1C1E`–`#25262A` or the logo’s own baked-in background.
+- No red primary (old AudioMask theme retired).
+- Primary CTA = cyan gradient text dark `#061018`.
 
 ## Typography
-- Family: `IBM Plex Sans` (UI) + `IBM Plex Mono` (métricas/código)
-- Scale: 12 / 14 / 16 / 20 / 28 / 36 (rem fixed, product)
-- Letter-spacing display: -0.02em max tight
+- UI: DM Sans
+- Mono / prices: JetBrains Mono
+- Wordmark: MASK in ink, `.SOUND` in cyan
 
-## Layout
-- Max content ~1120px
-- Sidebar dense controls
-- Cards radius 12px, border 1px, **no** wide drop-shadow
-- Primary CTA full-width in main flow
-
-## Motion
-- 180ms ease-out on hover/focus only
-- prefers-reduced-motion: none
+## Assets
+- `assets/logo.png` — master logo (1024→512 for web)

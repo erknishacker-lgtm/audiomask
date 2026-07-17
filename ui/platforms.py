@@ -84,6 +84,6 @@ def get_platform(pid: str) -> Dict[str, str]:
         "id": "generic",
         "name": "Outra",
         "icon": "globe",
-        "color": "E10600",
+        "color": "2ECBFF",
         "hint_key": "hint_generic",
     }

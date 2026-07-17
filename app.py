@@ -1,5 +1,5 @@
 """
-AudioMask — proteção de áudio com login, planos e painel admin.
+MASK.SOUND — proteção de áudio com login, planos e painel admin.
 
 Conta admin padrão (altere em produção):
   e-mail: admin@audiomask.com
@@ -27,7 +27,7 @@ from core.camada4_adversarial import ParametrosAdversarial
 from core.pipeline import AudioShieldPipeline, PipelineConfig
 from i18n.translations import LANGS, get_lang, set_lang, t
 from ui.platforms import PLATFORMS, get_platform, icon_url
-from ui.styles import inject as inject_styles
+from ui.styles import LOGO_PATH, inject as inject_styles, logo_data_uri
 from utils.audio_io import (
     audio_para_bytes_mp3,
     audio_para_bytes_wav,
@@ -50,9 +50,10 @@ from utils.video_io import (
     video_para_bytes,
 )
 
+_page_icon = LOGO_PATH if os.path.isfile(LOGO_PATH) else "🔒"
 st.set_page_config(
-    page_title="AudioMask",
-    page_icon="◈",
+    page_title="MASK.SOUND",
+    page_icon=_page_icon,
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -129,12 +130,19 @@ def topbar(user: Optional[User]) -> None:
     if user:
         left, right = st.columns([3, 2])
         with left:
-            try:
-                st.html(
-                    f'<div class="am-topbar"><div class="brand">Audio<em>Mask</em></div></div>'
-                )
-            except Exception:
-                st.markdown("**AudioMask**")
+            uri = logo_data_uri()
+            if uri:
+                try:
+                    st.html(
+                        f'<div class="ms-topbar">'
+                        f'<img src="{uri}" alt="MASK.SOUND" />'
+                        f'<div class="brand">MASK<span>.SOUND</span></div>'
+                        f"</div>"
+                    )
+                except Exception:
+                    st.markdown("**MASK.SOUND**")
+            else:
+                st.markdown("**MASK.SOUND**")
         with right:
             c1, c2, c3 = st.columns([1, 1, 1])
             with c1:
@@ -155,21 +163,31 @@ def topbar(user: Optional[User]) -> None:
 # ─── páginas ───────────────────────────────────────────────────────────────
 
 def page_login() -> None:
+    uri = logo_data_uri()
     try:
+        logo_html = (
+            f'<img class="ms-hero-logo" src="{uri}" alt="MASK.SOUND" />'
+            if uri
+            else ""
+        )
         st.html(
             f"""
-            <div class="am-hero">
-              <div class="am-logo">◈</div>
-              <h1>{t("app_name")}</h1>
+            <div class="ms-hero">
+              {logo_html}
+              <h1>MASK<span>.SOUND</span></h1>
               <p>{t("tagline")}</p>
               <div>
-                <span class="am-badge red">{t("free_badge")}</span>
-                <span class="am-badge">{t("pro_badge")}</span>
+                <span class="ms-badge cyan">{t("free_badge")}</span>
+                <span class="ms-badge cyan">{t("pro_badge")}</span>
               </div>
             </div>
             """
         )
     except Exception:
+        if os.path.isfile(LOGO_PATH):
+            c1, c2, c3 = st.columns([1, 2, 1])
+            with c2:
+                st.image(LOGO_PATH, use_container_width=True)
         st.title(t("app_name"))
         st.caption(t("tagline"))
 
@@ -233,7 +251,7 @@ def page_hub(user: User) -> None:
     with c1:
         try:
             st.html(
-                f'<div class="am-card"><h3>{t("action_encrypt")}</h3>'
+                f'<div class="ms-card"><h3>{t("action_encrypt")}</h3>'
                 f'<p>{t("action_encrypt_desc")}</p></div>'
             )
         except Exception:
@@ -245,7 +263,7 @@ def page_hub(user: User) -> None:
     with c2:
         try:
             st.html(
-                f'<div class="am-card"><h3>{t("action_account")}</h3>'
+                f'<div class="ms-card"><h3>{t("action_account")}</h3>'
                 f'<p>{t("action_account_desc")}</p></div>'
             )
         except Exception:
@@ -258,7 +276,7 @@ def page_hub(user: User) -> None:
         st.divider()
         try:
             st.html(
-                f'<div class="am-card"><h3>{t("action_admin")} · {t("admin_badge")}</h3>'
+                f'<div class="ms-card"><h3>{t("action_admin")} · {t("admin_badge")}</h3>'
                 f'<p>{t("action_admin_desc")}</p></div>'
             )
         except Exception:
@@ -280,7 +298,7 @@ def page_hub(user: User) -> None:
         with cols[i]:
             try:
                 st.html(
-                    f'<div class="am-layer"><strong>{code} · {title}</strong>'
+                    f'<div class="ms-layer"><strong>{code} · {title}</strong>'
                     f"<span>{desc}</span></div>"
                 )
             except Exception:
@@ -301,9 +319,9 @@ def page_account(user: User) -> None:
     st.divider()
     try:
         st.html(
-            f'<p class="am-section">{t("upgrade_title")}</p>'
-            f'<p class="am-price">R$ 49,90</p>'
-            f'<p class="am-muted">{t("upgrade_desc")}</p>'
+            f'<p class="ms-section">{t("upgrade_title")}</p>'
+            f'<p class="ms-price">R$ 49,90</p>'
+            f'<p class="ms-muted">{t("upgrade_desc")}</p>'
         )
     except Exception:
         st.subheader(t("upgrade_title"))
@@ -450,7 +468,7 @@ def page_encrypt(user: User) -> None:
             with cols[i % 3]:
                 try:
                     st.html(
-                        f'<div class="am-plat">'
+                        f'<div class="ms-plat">'
                         f'<img src="{icon_url(p["icon"], "FFFFFF")}" alt="{p["name"]}" />'
                         f'<span class="name">{p["name"]}</span></div>'
                     )
@@ -475,7 +493,7 @@ def page_encrypt(user: User) -> None:
         plat = get_platform(st.session_state.get("platform") or "generic")
         try:
             st.html(
-                f'<div class="am-plat" style="margin-bottom:1rem">'
+                f'<div class="ms-plat" style="margin-bottom:1rem">'
                 f'<img src="{icon_url(plat["icon"], "FFFFFF")}" />'
                 f'<span class="name">{plat["name"]}</span></div>'
             )
