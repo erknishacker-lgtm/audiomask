@@ -703,7 +703,7 @@
           metadados: $("#opt_metadados").checked,
           phase: $("#opt_phase").checked,
           compress: $("#opt_compress").checked,
-          decoyDb: parseFloat($("#decoyDb").value || "-24"),
+          decoyDb: parseFloat($("#decoyDb").value || "-36"),
         };
         state.wizard.whiteText = $("#whiteText").value || "";
         const wf = $("#whiteFile").files[0];
