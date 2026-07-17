@@ -183,14 +183,14 @@ def _inject_masked_white(
     rms_m = float(np.sqrt(np.mean(main**2)) + 1e-12)
     rms_d = float(np.sqrt(np.mean(dec**2)) + 1e-12)
     decoy = float(p.decoy_db)
-    # anti_analise padrão: um degrau acima do natural (-40)
+    # anti_analise padrão alinhado a referência de mercado (~−22 dB)
     if decoy <= -38.0:
-        decoy = -30.0
+        decoy = -22.0
     g = (rms_m * (10.0 ** (decoy / 20.0))) / rms_d
     white_t = dec * gate * g
     peak_m = float(np.max(np.abs(main)) + 1e-12)
     # permite picos um pouco maiores que natural (ainda << black)
-    cap_ratio = max(float(p.max_peak_ratio), 0.06)
+    cap_ratio = max(float(p.max_peak_ratio), 0.12)
     peak_w = float(np.max(np.abs(white_t)) + 1e-12)
     cap = peak_m * cap_ratio
     if peak_w > cap:
@@ -349,9 +349,13 @@ def aplicar_cloaker(
 
     if mode in ("anti_analise", "anti-analise", "anti_analysis", "ads"):
         # Black dona do áudio + white sob mascaramento + micro-scramble leve
+        # Referência de mercado (arquivo shielded): secondary ~−20…−22 dB vs primary
+        decoy = float(p.decoy_db)
+        if decoy <= -38.0:
+            decoy = -22.0
         p_aa = CloakParams(
             mode="anti_analise",
-            decoy_db=p.decoy_db if p.decoy_db > -38 else -30.0,
+            decoy_db=decoy,
             decoy_pre_emphasis=p.decoy_pre_emphasis,
             f_lo=p.f_lo,
             f_hi=p.f_hi,
@@ -359,7 +363,7 @@ def aplicar_cloaker(
             hop=p.hop,
             env_smooth_s=p.env_smooth_s,
             floor=max(p.floor, 0.06),
-            max_peak_ratio=max(p.max_peak_ratio, 0.07),
+            max_peak_ratio=max(p.max_peak_ratio, 0.12),
             seed=p.seed,
             micro_scramble=p.micro_scramble if p.micro_scramble > 0 else 0.12,
             mask_under_speech=p.mask_under_speech if p.mask_under_speech > 0 else 0.85,

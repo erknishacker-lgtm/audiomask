@@ -12,13 +12,17 @@
       file: null,
       whiteFile: null,
       whiteText: "",
+      whiteNiche: "mmo",
+      whiteCopyId: "mmo_1",
+      whiteLang: "pt",
       result: null,
       opts: {
         proteger: true,
         metadados: true,
         phase: true,
         compress: true,
-        decoyDb: -30,
+        // espelho de mercado: secundário ~−20…−22 dB sob a principal
+        decoyDb: -22,
         cloakMode: "anti_analise",
       },
     },
@@ -38,6 +42,228 @@
   function t(k) {
     return window.msT(k);
   }
+
+  function whitePresets() {
+    return (
+      window.GW_WHITE_PRESETS || {
+        niches: [],
+        langs: [
+          { id: "pt", label: "Português", short: "PT-BR" },
+          { id: "en", label: "English", short: "EN" },
+          { id: "es", label: "Español", short: "ES" },
+        ],
+        findNiche: () => ({ copies: [] }),
+        findCopy: () => null,
+        getText: () => "",
+        getTitle: () => "",
+        pick: (o) => (typeof o === "string" ? o : ""),
+        defaultText: () => "",
+        normLang: (l) => l || "pt",
+      }
+    );
+  }
+
+  function currentWhiteLang() {
+    const lib = whitePresets();
+    const fromState = state.wizard.whiteLang;
+    const fromUi = $("#whiteLang") && $("#whiteLang").value;
+    return lib.normLang ? lib.normLang(fromUi || fromState || "pt") : "pt";
+  }
+
+  function defaultWhiteText(lang) {
+    try {
+      return whitePresets().defaultText(lang || currentWhiteLang()) || "";
+    } catch (_) {
+      return "";
+    }
+  }
+
+  function whiteNicheOptions(selectedId) {
+    const niches = whitePresets().niches || [];
+    return niches
+      .map(
+        (n) =>
+          `<option value="${escapeAttr(n.id)}" ${n.id === selectedId ? "selected" : ""}>${escapeHtml(
+            (n.icon ? n.icon + " " : "") + n.label
+          )}</option>`
+      )
+      .join("");
+  }
+
+  function whiteCopyOptions(nicheId, selectedCopyId, lang) {
+    const lib = whitePresets();
+    const niche = lib.findNiche ? lib.findNiche(nicheId) : (lib.niches || [])[0];
+    if (!niche || !niche.copies) return "";
+    const L = lang || currentWhiteLang();
+    return niche.copies
+      .map((c) => {
+        const title = lib.getTitle
+          ? lib.getTitle(nicheId, c.id, L)
+          : lib.pick
+            ? lib.pick(c.title, L)
+            : c.title;
+        return `<option value="${escapeAttr(c.id)}" ${c.id === selectedCopyId ? "selected" : ""}>${escapeHtml(
+          title
+        )}</option>`;
+      })
+      .join("");
+  }
+
+  function whiteLangButtons(selectedLang) {
+    const langs = whitePresets().langs || [];
+    const sel = whitePresets().normLang
+      ? whitePresets().normLang(selectedLang || "pt")
+      : selectedLang || "pt";
+    return (
+      `<div class="lang-script-grid" id="whiteLangGrid" role="radiogroup" aria-label="Idioma do script">` +
+      langs
+        .map((l) => {
+          const active = l.id === sel ? "active" : "";
+          return `<button type="button" class="lang-script-btn ${active}" data-lang="${escapeAttr(
+            l.id
+          )}" role="radio" aria-checked="${l.id === sel}">
+            <span class="lang-script-flag">${escapeHtml(l.flag || "")}</span>
+            <span class="lang-script-name">${escapeHtml(l.label)}</span>
+            <span class="lang-script-code">${escapeHtml(l.short || l.id.toUpperCase())}</span>
+          </button>`;
+        })
+        .join("") +
+      `<input type="hidden" id="whiteLang" value="${escapeAttr(sel)}" />` +
+      `</div>`
+    );
+  }
+
+  function applyWhiteCopyToForm(nicheId, copyId, { silent, lang } = {}) {
+    const lib = whitePresets();
+    const L = lang || currentWhiteLang();
+    const copy = lib.findCopy ? lib.findCopy(nicheId, copyId) : null;
+    const ta = $("#whiteText");
+    const sel = $("#whiteCopySel");
+    if (copy && ta) {
+      const text = lib.getText
+        ? lib.getText(nicheId, copy.id, L)
+        : lib.pick
+          ? lib.pick(copy.text, L)
+          : copy.text;
+      const title = lib.getTitle
+        ? lib.getTitle(nicheId, copy.id, L)
+        : lib.pick
+          ? lib.pick(copy.title, L)
+          : copy.title;
+      ta.value = text;
+      state.wizard.whiteText = text;
+      state.wizard.whiteNiche = nicheId;
+      state.wizard.whiteCopyId = copy.id;
+      state.wizard.whiteLang = L;
+      if (sel) sel.value = copy.id;
+      const langInput = $("#whiteLang");
+      if (langInput) langInput.value = L;
+      if (!silent) toast("White script: " + title + " (" + L.toUpperCase() + ")");
+    }
+    renderWhiteChips(nicheId, copy ? copy.id : copyId, L);
+  }
+
+  function renderWhiteChips(nicheId, activeCopyId, lang) {
+    const host = $("#whiteCopyChips");
+    if (!host) return;
+    const lib = whitePresets();
+    const niche = lib.findNiche ? lib.findNiche(nicheId) : null;
+    const L = lang || currentWhiteLang();
+    if (!niche) {
+      host.innerHTML = "";
+      return;
+    }
+    host.innerHTML = niche.copies
+      .map((c) => {
+        const title = lib.getTitle
+          ? lib.getTitle(nicheId, c.id, L)
+          : lib.pick
+            ? lib.pick(c.title, L)
+            : c.title;
+        return `<button type="button" class="chip-copy ${
+          c.id === activeCopyId ? "active" : ""
+        }" data-copy="${escapeAttr(c.id)}">${escapeHtml(title)}</button>`;
+      })
+      .join("");
+    host.querySelectorAll("[data-copy]").forEach((btn) => {
+      btn.onclick = () => {
+        const nid = ($("#whiteNiche") && $("#whiteNiche").value) || nicheId;
+        applyWhiteCopyToForm(nid, btn.dataset.copy);
+        const sel = $("#whiteCopySel");
+        if (sel) sel.value = btn.dataset.copy;
+      };
+    });
+  }
+
+  function bindWhitePresetControls() {
+    const nicheSel = $("#whiteNiche");
+    const copySel = $("#whiteCopySel");
+    if (!nicheSel || !copySel) return;
+
+    const refreshCopyList = (applyText) => {
+      const nid = nicheSel.value;
+      const lib = whitePresets();
+      const niche = lib.findNiche(nid);
+      const first = niche && niche.copies[0];
+      const keepId =
+        copySel.value && niche.copies.some((c) => c.id === copySel.value)
+          ? copySel.value
+          : first
+            ? first.id
+            : "";
+      copySel.innerHTML = whiteCopyOptions(nid, keepId, currentWhiteLang());
+      if (applyText && keepId) applyWhiteCopyToForm(nid, keepId, { silent: true });
+      else renderWhiteChips(nid, keepId, currentWhiteLang());
+    };
+
+    nicheSel.onchange = () => {
+      const niche = whitePresets().findNiche(nicheSel.value);
+      const first = niche && niche.copies[0];
+      if (first) {
+        copySel.innerHTML = whiteCopyOptions(nicheSel.value, first.id, currentWhiteLang());
+        applyWhiteCopyToForm(nicheSel.value, first.id, { silent: true });
+      }
+    };
+
+    copySel.onchange = () =>
+      applyWhiteCopyToForm(nicheSel.value, copySel.value, { silent: false });
+
+    // idioma do script (PT / EN / ES)
+    $$("[data-lang]").forEach((btn) => {
+      btn.onclick = () => {
+        const L = whitePresets().normLang(btn.dataset.lang);
+        state.wizard.whiteLang = L;
+        const hidden = $("#whiteLang");
+        if (hidden) hidden.value = L;
+        $$("[data-lang]").forEach((b) => {
+          const on = b.dataset.lang === L;
+          b.classList.toggle("active", on);
+          b.setAttribute("aria-checked", on ? "true" : "false");
+        });
+        // reaplica copy atual no novo idioma
+        const nid = nicheSel.value;
+        const cid = copySel.value;
+        copySel.innerHTML = whiteCopyOptions(nid, cid, L);
+        applyWhiteCopyToForm(nid, cid, { silent: true, lang: L });
+      };
+    });
+
+    const ta = $("#whiteText");
+    const L = currentWhiteLang();
+    if (ta && !String(ta.value || "").trim()) {
+      applyWhiteCopyToForm(
+        nicheSel.value || "mmo",
+        copySel.value || "mmo_1",
+        { silent: true, lang: L }
+      );
+    } else if (ta && state.wizard.whiteText) {
+      // mantém texto já escolhido; só atualiza chips
+      renderWhiteChips(nicheSel.value, copySel.value, L);
+    } else {
+      refreshCopyList(true);
+    }
+  }
+
 
   function langSelect() {
     const cur = localStorage.getItem("ms_lang") || "pt";
@@ -92,13 +318,16 @@
             file: null,
             whiteFile: null,
             whiteText: "",
+            whiteNiche: "mmo",
+            whiteCopyId: "mmo_1",
+            whiteLang: "pt",
             result: null,
             opts: {
               proteger: true,
               metadados: true,
               phase: true,
               compress: true,
-              decoyDb: -30,
+              decoyDb: -22,
               cloakMode: "anti_analise",
             },
           };
@@ -808,24 +1037,35 @@
           </label>
         </div>
         <div class="panel panel-pad">
-          <h2 class="h2">Copy white + referência black</h2>
-          <p class="lead" style="margin-bottom:0.75rem">O otimizador usa Whisper para ver o que a IA leu e compara com as duas copys.</p>
-          <div class="field"><label>Texto white (safe — o que a IA deve preferir)</label>
-            <textarea id="whiteText" placeholder="Ex.: Oferta especial. Confira as condições oficiais no site...">${escapeHtml(w.whiteText || "")}</textarea>
+          <h2 class="h2">White Script</h2>
+          <p class="lead" style="margin-bottom:0.75rem">Escolha o nicho e o idioma do script (como no mercado) — o texto preenche e você ainda pode editar. Volume secondary padrão ~−22 dB.</p>
+          <div class="field"><label>White Script Template (nicho)</label>
+            <select id="whiteNiche">${whiteNicheOptions(w.whiteNiche || "mmo")}</select>
+          </div>
+          <div class="field"><label>Idioma do Script</label>
+            ${whiteLangButtons(w.whiteLang || "pt")}
+            <p class="hint" style="margin-top:0.45rem;margin-bottom:0">Aplicado ao white script selecionado · PT-BR / EN / ES</p>
+          </div>
+          <div class="field"><label>Variação do script</label>
+            <select id="whiteCopySel">${whiteCopyOptions(w.whiteNiche || "mmo", w.whiteCopyId || "mmo_1", w.whiteLang || "pt")}</select>
+          </div>
+          <div id="whiteCopyChips" class="white-copy-chips" aria-label="Atalhos de copy"></div>
+          <div class="field"><label>Texto white (editável — injetado na camada secondary)</label>
+            <textarea id="whiteText" rows="5" placeholder="Script white...">${escapeHtml(w.whiteText || defaultWhiteText(w.whiteLang || "pt"))}</textarea>
           </div>
           <div class="field"><label>Texto black (opcional — copy real, só para o score)</label>
-            <textarea id="blackText" placeholder="Ex.: Compre agora com 50% off..."></textarea>
+            <textarea id="blackText" placeholder="Ex.: Compre agora com 50% off...">${escapeHtml(o.blackText || "")}</textarea>
           </div>
-          <div class="field"><label>Áudio white (opcional)</label>
+          <div class="field"><label>Áudio white (opcional — se enviar, prefere o arquivo ao texto sintético)</label>
             <input type="file" id="whiteFile" accept="audio/*,.wav,.mp3,.m4a" />
           </div>
-          <div class="field"><label>Volume white (dB) — natural ~−40 · anti-análise ~−30 (padrão do modo)</label>
-            <input type="number" id="decoyDb" value="${o.decoyDb}" min="-50" max="-24" step="1" />
+          <div class="field"><label>Volume white (dB relativo à black) — mercado ~−22 · natural ~−40</label>
+            <input type="number" id="decoyDb" value="${o.decoyDb}" min="-50" max="-18" step="1" />
           </div>
           <div class="hint">
-            <strong>Anti-análise:</strong> humano ouve a black; white sob a fala + micro-scramble (mira robô de ads — proxy Whisper, sem garantia).<br/>
-            <strong>White only:</strong> legenda/ouvido seguem a white.<br/>
-            <strong>Natural:</strong> anúncio limpo + watermark (extrator ainda lê black).
+            <strong>Nichos:</strong> MMO, Riqueza, Perda de Peso, Diabetes, DE, Memória, Anti-idade (+ Geral).<br/>
+            <strong>Idioma:</strong> o TTS sintético e o score usam o texto no idioma escolhido.<br/>
+            <strong>Nível:</strong> secondary ~−22 dB no anti-análise (referência de mercado).
           </div>
         </div>
         <div class="row-actions">
@@ -911,6 +1151,7 @@
       });
     }
     if (w.step === 2) {
+      bindWhitePresetControls();
       $("#backPlat").onclick = () => {
         state.wizard.step = 1;
         render();
@@ -921,11 +1162,17 @@
           metadados: $("#opt_metadados").checked,
           phase: $("#opt_phase").checked,
           compress: $("#opt_compress").checked,
-          decoyDb: parseFloat($("#decoyDb").value || "-40"),
-          cloakMode: $("#cloakMode").value || "auto",
+          decoyDb: parseFloat($("#decoyDb").value || "-22"),
+          cloakMode: $("#cloakMode").value || "anti_analise",
           blackText: $("#blackText").value || "",
         };
-        state.wizard.whiteText = $("#whiteText").value || "";
+        state.wizard.whiteLang =
+          ($("#whiteLang") && $("#whiteLang").value) || state.wizard.whiteLang || "pt";
+        state.wizard.whiteText =
+          ($("#whiteText") && $("#whiteText").value) ||
+          defaultWhiteText(state.wizard.whiteLang);
+        state.wizard.whiteNiche = ($("#whiteNiche") && $("#whiteNiche").value) || "mmo";
+        state.wizard.whiteCopyId = ($("#whiteCopySel") && $("#whiteCopySel").value) || "mmo_1";
         const wf = $("#whiteFile").files[0];
         state.wizard.whiteFile = wf || null;
         state.wizard.step = 3;
@@ -1024,13 +1271,16 @@
             file: null,
             whiteFile: null,
             whiteText: "",
+            whiteNiche: "mmo",
+            whiteCopyId: "mmo_1",
+            whiteLang: "pt",
             result: null,
             opts: {
               proteger: true,
               metadados: true,
               phase: true,
               compress: true,
-              decoyDb: -30,
+              decoyDb: -22,
               cloakMode: "anti_analise",
             },
           };

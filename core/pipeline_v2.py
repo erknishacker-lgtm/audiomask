@@ -53,9 +53,9 @@ class OpcoesProcessamento:
     optimize_stt: bool = True
     stt_max_attempts: int = 5
     platform: str = "capcut"
-    # anti_analise defaults
+    # anti_analise defaults (ref. mercado secondary ~−22 dB)
     micro_scramble: float = 0.12
-    anti_decoy_db: float = -30.0
+    anti_decoy_db: float = -22.0
 
 
 def processar_midia(
@@ -104,7 +104,7 @@ def processar_midia(
                 config=OptimizeConfig(
                     max_attempts=int(getattr(opt, "stt_max_attempts", 5) or 5),
                     decoy_db=opt.decoy_db,
-                    anti_decoy_db=float(getattr(opt, "anti_decoy_db", -30.0) or -30.0),
+                    anti_decoy_db=float(getattr(opt, "anti_decoy_db", -22.0) or -22.0),
                     micro_scramble_start=float(getattr(opt, "micro_scramble", 0.12) or 0.12),
                     language="pt",
                     whisper_model="tiny",
@@ -177,7 +177,7 @@ def processar_midia(
                 CloakParams(
                     mode=fixed_mode,
                     decoy_db=(
-                        float(getattr(opt, "anti_decoy_db", -30.0) or -30.0)
+                        float(getattr(opt, "anti_decoy_db", -22.0) or -22.0)
                         if fixed_mode == "anti_analise"
                         else opt.decoy_db
                     ),

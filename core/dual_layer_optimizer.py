@@ -38,8 +38,8 @@ class OptimizeConfig:
     require_stt: bool = False
     # goal: white_win (auto clássico) | anti_analise
     goal: str = "white_win"
-    # anti_analise: white um degrau mais presente
-    anti_decoy_db: float = -30.0
+    # anti_analise: nível do secundário (ref. mercado ~−22 dB)
+    anti_decoy_db: float = -22.0
     micro_scramble_start: float = 0.10
 
 
@@ -269,22 +269,22 @@ def optimize_anti_analise(
     engine = STTEngine(model_size=cfg.whisper_model)
     stt_ok = engine.available()
 
-    base_db = float(cfg.anti_decoy_db if cfg.anti_decoy_db else -30.0)
+    base_db = float(cfg.anti_decoy_db if cfg.anti_decoy_db else -22.0)
     if base_db <= -38:
-        base_db = -30.0
+        base_db = -22.0
     micro0 = float(cfg.micro_scramble_start or 0.10)
 
-    # grade suave: sobe white e micro-scramble sem ir para redirect destrutivo
+    # grade em torno do nível de mercado (~−22 dB); sobe se precisar de mais confusão
     schedules: List[CloakParams] = []
-    db_steps = [base_db, base_db + 2.0, base_db + 4.0, base_db - 2.0, base_db + 6.0]
+    db_steps = [base_db, base_db + 2.0, base_db - 2.0, base_db + 4.0, base_db + 6.0]
     for i, db in enumerate(db_steps[: max(1, cfg.max_attempts)]):
         schedules.append(
             CloakParams(
                 mode="anti_analise",
-                decoy_db=float(np.clip(db, -36.0, -24.0)),
+                decoy_db=float(np.clip(db, -36.0, -18.0)),
                 micro_scramble=min(0.22, micro0 + i * 0.03),
                 mask_under_speech=min(0.95, 0.80 + i * 0.03),
-                max_peak_ratio=0.07 + i * 0.01,
+                max_peak_ratio=0.12 + i * 0.015,
                 seed=31 + i,
             )
         )

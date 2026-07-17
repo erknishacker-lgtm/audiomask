@@ -309,17 +309,17 @@ async def process_media(
             mode = "auto"
         db = float(decoy_db)
         if mode == "anti_analise":
-            # white um degrau mais presente que o residual natural
-            if db > -24.0 or db < -50.0:
-                db = -30.0
-            db = float(max(-36.0, min(-24.0, db)))
+            # ref. mercado: secondary ~−20…−22 dB sob a black
+            if db > -18.0 or db < -50.0:
+                db = -22.0
+            db = float(max(-36.0, min(-18.0, db)))
             anti_db = db
         else:
             if db > -30.0:
                 db = -40.0
             if db < -50.0:
                 db = -50.0
-            anti_db = -30.0
+            anti_db = -22.0
         blend = float(max(0.2, min(0.55, float(stt_blend))))
         opt = OpcoesProcessamento(
             proteger_audio_ia=_flag(opt_proteger),
