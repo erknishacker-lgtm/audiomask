@@ -56,9 +56,28 @@ def gerar_decoy_sintetico(
     sr: int,
     duracao_s: Optional[float] = None,
     f0: float = 160.0,
+    language: str = "",
 ) -> np.ndarray:
-    """Fala sintética clara (formantes) para camada white."""
-    chars = [c for c in texto.lower() if c.isalnum() or c == " "]
+    """
+    Gera a camada white a partir do TEXTO da copy — preferindo TTS real (fala).
+
+    Antes: formantes (soava como barulho). Agora: edge-tts / macOS say / espeak.
+    """
+    try:
+        from core.tts_white import gerar_fala_white
+
+        y, _meta = gerar_fala_white(
+            texto or "",
+            sr,
+            duracao_s=duracao_s,
+            language=language,
+        )
+        return np.asarray(y, dtype=np.float32)
+    except Exception:
+        pass
+
+    # fallback de emergência (formantes) — não deve ser o caminho normal
+    chars = [c for c in (texto or "").lower() if c.isalnum() or c == " "]
     if not chars:
         chars = list("oferta especial confira as condicoes oficiais no site")
     n_target = int((duracao_s or max(2.5, len(chars) * 0.075)) * sr)
@@ -69,7 +88,7 @@ def gerar_decoy_sintetico(
         "o": (500, 900, 2400),
         "u": (350, 700, 2300),
     }
-    rng = np.random.default_rng(abs(hash(texto)) % (2**31))
+    rng = np.random.default_rng(abs(hash(texto or "x")) % (2**31))
     chunks = [np.zeros(int(0.04 * sr))]
     for ch in chars:
         n = max(1, int(0.07 * sr))
@@ -93,7 +112,7 @@ def gerar_decoy_sintetico(
     chunks.append(np.zeros(int(0.06 * sr)))
     y = np.concatenate(chunks).astype(np.float64)
     if len(y) < n_target:
-        y = np.tile(y, int(np.ceil(n_target / len(y))))[:n_target]
+        y = np.tile(y, int(np.ceil(n_target / max(1, len(y)))))[:n_target]
     else:
         y = y[:n_target]
     y = bandpass(y, sr, 300.0, 3600.0)
@@ -169,13 +188,14 @@ def _inject_masked_white(
     White dinâmica sob a fala (mascaramento psicoacústico simples).
 
     Diferente do residual natural: a white sobe JUNTO com o envelope da black
-    (onde o ouvido mascara melhor), ~-28..-32 dB RMS relativo — ainda quieta,
-    porém mais presente para extratores de fala do que -40 dB fixo.
+    (onde o ouvido mascara melhor). White deve ser FALA real (TTS), não ruído.
     """
-    dec = bandpass(white, sr, 280.0, 3800.0)
-    dec = pre_emphasis(dec, 0.85) * float(p.decoy_pre_emphasis) + dec * (
-        1.0 - float(p.decoy_pre_emphasis)
-    )
+    # banda de voz larga o bastante para inteligibilidade (sem cortar consoantes)
+    dec = bandpass(white, sr, 120.0, 6500.0)
+    # pre-emphasis leve — forte demais vira chiado
+    pe = float(np.clip(p.decoy_pre_emphasis, 0.0, 0.45))
+    dec = pre_emphasis(dec, 0.7) * pe + dec * (1.0 - pe)
+
     env = envelope(main, sr, p.env_smooth_s)
     under = float(np.clip(p.mask_under_speech, 0.0, 1.0))
     # gate alto sob fala (env), baixo no silêncio — evita white “sussurro solto”
@@ -365,11 +385,17 @@ def aplicar_cloaker(
             floor=max(p.floor, 0.06),
             max_peak_ratio=max(p.max_peak_ratio, 0.12),
             seed=p.seed,
-            micro_scramble=p.micro_scramble if p.micro_scramble > 0 else 0.12,
+            # micro_scramble baixo: demais vira "barulho" e mata a inteligibilidade da white
+            micro_scramble=min(
+                0.12,
+                p.micro_scramble if p.micro_scramble > 0 else 0.06,
+            ),
             mask_under_speech=p.mask_under_speech if p.mask_under_speech > 0 else 0.85,
         )
         y = _inject_masked_white(main, dec, sr, p_aa)
+        # scramble bem suave — só na black residual, sem destruir a fala white
         y = _micro_scramble_stt_band(y, sr, p_aa, rng)
+
         # reforço residual bem baixo (watermark extra, quase inaudível)
         y = _inject_quiet_white(
             y,

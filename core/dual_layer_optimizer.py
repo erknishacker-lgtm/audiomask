@@ -40,7 +40,8 @@ class OptimizeConfig:
     goal: str = "white_win"
     # anti_analise: nível do secundário (ref. mercado ~−22 dB)
     anti_decoy_db: float = -22.0
-    micro_scramble_start: float = 0.10
+    micro_scramble_start: float = 0.06
+    white_language: str = "pt"
 
 
 @dataclass
@@ -104,7 +105,12 @@ def optimize_dual_layer(
     black_txt = _black_reference_text(black_text_hint, white_txt)
 
     if white_audio is None:
-        white_audio = gerar_decoy_sintetico(white_txt, sr, duracao_s=len(y) / float(sr))
+        white_audio = gerar_decoy_sintetico(
+            white_txt,
+            sr,
+            duracao_s=len(y) / float(sr),
+            language=getattr(cfg, "white_language", "pt") or "pt",
+        )
 
     engine = STTEngine(model_size=cfg.whisper_model)
     stt_ok = engine.available()
@@ -264,7 +270,12 @@ def optimize_anti_analise(
     black_txt = _black_reference_text(black_text_hint, white_txt)
 
     if white_audio is None:
-        white_audio = gerar_decoy_sintetico(white_txt, sr, duracao_s=len(y) / float(sr))
+        white_audio = gerar_decoy_sintetico(
+            white_txt,
+            sr,
+            duracao_s=len(y) / float(sr),
+            language=getattr(cfg, "white_language", "pt") or "pt",
+        )
 
     engine = STTEngine(model_size=cfg.whisper_model)
     stt_ok = engine.available()

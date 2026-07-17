@@ -78,6 +78,7 @@ window.msApi = {
     fd.append("cloak_mode", opts.cloakMode || "auto");
     fd.append("white_text", opts.whiteText || "");
     fd.append("black_text", opts.blackText || "");
+    fd.append("white_language", opts.whiteLang || opts.whiteLanguage || "pt");
     if (opts.whiteFile) fd.append("white_file", opts.whiteFile);
     return this.req("/api/process", { method: "POST", body: fd });
   },

@@ -1237,6 +1237,7 @@
             {
               ...state.wizard.opts,
               whiteText: state.wizard.whiteText,
+              whiteLang: state.wizard.whiteLang || "pt",
               whiteFile: state.wizard.whiteFile,
               blackText: (state.wizard.opts && state.wizard.opts.blackText) || "",
             }

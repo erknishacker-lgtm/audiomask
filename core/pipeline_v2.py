@@ -54,8 +54,9 @@ class OpcoesProcessamento:
     stt_max_attempts: int = 5
     platform: str = "capcut"
     # anti_analise defaults (ref. mercado secondary ~−22 dB)
-    micro_scramble: float = 0.12
+    micro_scramble: float = 0.08
     anti_decoy_db: float = -22.0
+    white_language: str = "pt"  # pt | en | es — idioma do TTS white
 
 
 def processar_midia(
@@ -84,8 +85,27 @@ def processar_midia(
 
     # 1) Dual-layer + otimizador STT (quando auto)
     white_src = audio_white
+    tts_meta: Dict[str, Any] = {}
     if white_src is None and opt.usar_cloaker:
-        white_src = gerar_decoy_sintetico(opt.white_text, sr, duracao_s=len(y) / sr)
+        # TTS real da copy white (não formantes/barulho)
+        try:
+            from core.tts_white import gerar_fala_white
+
+            white_src, tts_meta = gerar_fala_white(
+                opt.white_text,
+                sr,
+                duracao_s=len(y) / float(sr),
+                language=getattr(opt, "white_language", "pt") or "pt",
+            )
+            report["etapas"].append({"white_tts": tts_meta})
+        except Exception as e:
+            white_src = gerar_decoy_sintetico(
+                opt.white_text,
+                sr,
+                duracao_s=len(y) / float(sr),
+                language=getattr(opt, "white_language", "pt") or "pt",
+            )
+            report["etapas"].append({"white_tts": {"error": str(e), "fallback": True}})
 
     stt_preview: Dict[str, Any] = {}
     mode = (getattr(opt, "cloak_mode", "auto") or "auto").lower().replace("-", "_")
@@ -105,10 +125,11 @@ def processar_midia(
                     max_attempts=int(getattr(opt, "stt_max_attempts", 5) or 5),
                     decoy_db=opt.decoy_db,
                     anti_decoy_db=float(getattr(opt, "anti_decoy_db", -22.0) or -22.0),
-                    micro_scramble_start=float(getattr(opt, "micro_scramble", 0.12) or 0.12),
+                    micro_scramble_start=float(getattr(opt, "micro_scramble", 0.08) or 0.08),
                     language="pt",
                     whisper_model="tiny",
                     goal="anti_analise",
+                    white_language=getattr(opt, "white_language", "pt") or "pt",
                 ),
             )
             y_work = opt_res.audio

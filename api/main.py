@@ -251,6 +251,7 @@ async def process_media(
     cloak_mode: str = Form("auto"),
     black_text: str = Form(""),
     stt_blend: float = Form(0.4),
+    white_language: str = Form("pt"),
     user: User = Depends(current_user),
 ):
     """
@@ -338,7 +339,8 @@ async def process_media(
             anti_ia_leve=False,
             platform=platform,
             anti_decoy_db=anti_db,
-            micro_scramble=0.12 if mode == "anti_analise" else 0.0,
+            micro_scramble=0.06 if mode == "anti_analise" else 0.0,
+            white_language=(white_language or "pt").strip().lower()[:5] or "pt",
         )
 
         result = processar_midia(
