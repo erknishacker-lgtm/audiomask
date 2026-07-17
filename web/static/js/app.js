@@ -6,7 +6,21 @@
     user: null,
     view: "boot",
     platforms: [],
-    wizard: { step: 1, platform: null, file: null, result: null },
+    wizard: {
+      step: 1,
+      platform: null,
+      file: null,
+      whiteFile: null,
+      whiteText: "",
+      result: null,
+      opts: {
+        proteger: true,
+        metadados: true,
+        phase: true,
+        compress: true,
+        decoyDb: -24,
+      },
+    },
     authTab: "login",
   };
 
@@ -67,7 +81,21 @@
       el.onclick = () => {
         state.view = el.getAttribute("data-go");
         if (state.view === "protect") {
-          state.wizard = { step: 1, platform: null, file: null, result: null };
+          state.wizard = {
+            step: 1,
+            platform: null,
+            file: null,
+            whiteFile: null,
+            whiteText: "",
+            result: null,
+            opts: {
+              proteger: true,
+              metadados: true,
+              phase: true,
+              compress: true,
+              decoyDb: -24,
+            },
+          };
         }
         render();
       };
@@ -376,8 +404,9 @@
     const steps = `
       <div class="steps">
         <span class="step-dot ${w.step === 1 ? "on" : w.step > 1 ? "done" : ""}">1 · Plataforma</span>
-        <span class="step-dot ${w.step === 2 ? "on" : w.step > 2 ? "done" : ""}">2 · Arquivo</span>
-        <span class="step-dot ${w.step === 3 ? "on" : ""}">3 · Resultado</span>
+        <span class="step-dot ${w.step === 2 ? "on" : w.step > 2 ? "done" : ""}">2 · Funções</span>
+        <span class="step-dot ${w.step === 3 ? "on" : w.step > 3 ? "done" : ""}">3 · Arquivo</span>
+        <span class="step-dot ${w.step === 4 ? "on" : ""}">4 · Resultado</span>
       </div>`;
 
     let body = "";
@@ -400,13 +429,58 @@
           <button class="btn btn-ghost" data-go="dashboard">← ${t("back")}</button>
         </div>`;
     } else if (w.step === 2) {
+      /* POPUP / painel das 4 funções principais */
+      const o = w.opts;
+      body = `
+        <h1 class="h1">Funções do criativo</h1>
+        <p class="lead">Escolha o que aplicar. O áudio principal (black) permanece <strong>100% audível</strong>. A copy white entra baixa para as IAs de legenda.</p>
+        <div class="panel panel-pad" style="margin-bottom:1rem">
+          <label class="field" style="display:flex;gap:0.75rem;align-items:flex-start;cursor:pointer">
+            <input type="checkbox" id="opt_proteger" ${o.proteger ? "checked" : ""} style="margin-top:0.35rem;width:auto" />
+            <span><strong>1 · Proteger áudio contra IA (cloaker black → white)</strong><br/>
+            <span style="color:var(--muted);font-size:0.88rem">Mantém a voz do anúncio clara. Injeta copy “white” em volume baixo (mascarada) para a transcrição das plataformas.</span></span>
+          </label>
+          <label class="field" style="display:flex;gap:0.75rem;align-items:flex-start;cursor:pointer">
+            <input type="checkbox" id="opt_metadados" ${o.metadados ? "checked" : ""} style="margin-top:0.35rem;width:auto" />
+            <span><strong>2 · Limpar metadados digitais</strong><br/>
+            <span style="color:var(--muted);font-size:0.88rem">Remove tags, software, GPS e rastros do arquivo de mídia.</span></span>
+          </label>
+          <label class="field" style="display:flex;gap:0.75rem;align-items:flex-start;cursor:pointer">
+            <input type="checkbox" id="opt_phase" ${o.phase ? "checked" : ""} style="margin-top:0.35rem;width:auto" />
+            <span><strong>3 · Encriptamento phase-stereo invisível</strong><br/>
+            <span style="color:var(--muted);font-size:0.88rem">Codifica proteção no canal L/R (diferença de fase), quase imperceptível.</span></span>
+          </label>
+          <label class="field" style="display:flex;gap:0.75rem;align-items:flex-start;cursor:pointer;margin-bottom:0">
+            <input type="checkbox" id="opt_compress" ${o.compress ? "checked" : ""} style="margin-top:0.35rem;width:auto" />
+            <span><strong>4 · Compressão de vídeo sem perda perceptível</strong><br/>
+            <span style="color:var(--muted);font-size:0.88rem">H.264 CRF ~20 — arquivo menor, visual praticamente igual.</span></span>
+          </label>
+        </div>
+        <div class="panel panel-pad">
+          <h2 class="h2">Copy white (o que a IA deve “ouvir”)</h2>
+          <p class="lead" style="margin-bottom:0.75rem">Cole o texto da copy branca ou envie um áudio white gravado. Se vazio, geramos fala sintética limpa.</p>
+          <div class="field"><label>Texto white</label>
+            <textarea id="whiteText" placeholder="Ex.: Oferta especial. Confira as condições oficiais no site...">${escapeHtml(w.whiteText || "")}</textarea>
+          </div>
+          <div class="field"><label>Áudio white (opcional)</label>
+            <input type="file" id="whiteFile" accept="audio/*,.wav,.mp3,.m4a" />
+          </div>
+          <div class="field"><label>Volume da white (dB, mais negativo = mais baixa) · padrão −24</label>
+            <input type="number" id="decoyDb" value="${o.decoyDb}" min="-40" max="-12" step="1" />
+          </div>
+        </div>
+        <div class="row-actions">
+          <button class="btn btn-ghost" id="backPlat">← ${t("back")}</button>
+          <button class="btn btn-primary" id="toUpload">${t("continue")}</button>
+        </div>`;
+    } else if (w.step === 3) {
       const plat = state.platforms.find((p) => p.id === w.platform) || {
         name: w.platform,
       };
       body = `
         <h1 class="h1">${t("uploadTitle")}</h1>
         <p class="lead">${t("uploadSub")}</p>
-        <div class="hint"><strong>${escapeHtml(plat.name)}</strong> — modo otimizado para esta plataforma (anti-legenda na voz).</div>
+        <div class="hint"><strong>${escapeHtml(plat.name)}</strong> — black audível + white baixa para ASR. Compare o resultado antes de subir na plataforma.</div>
         <div class="drop" id="drop">
           <strong>${t("drop")}</strong>
           <span>${t("dropHint")}</span>
@@ -414,14 +488,14 @@
           <input type="file" id="fileInput" accept="audio/*,video/*,.mp4,.mov,.wav,.mp3,.mkv,.webm" />
         </div>
         <div class="row-actions">
-          <button class="btn btn-ghost" id="back1">← ${t("back")}</button>
+          <button class="btn btn-ghost" id="backOpts">← ${t("back")}</button>
           <button class="btn btn-primary" id="runBtn" disabled>${t("run")}</button>
         </div>`;
     } else {
       const r = w.result;
       body = `
         <h1 class="h1">${t("result")}</h1>
-        <p class="lead">Camadas aplicadas. Compare e baixe.</p>
+        <p class="lead">Principal deve soar normal. A white está embutida baixa. Baixe e teste a legenda na plataforma.</p>
         <div class="compare">
           <div class="box">
             <h4>${t("original")}</h4>
@@ -470,6 +544,26 @@
       });
     }
     if (w.step === 2) {
+      $("#backPlat").onclick = () => {
+        state.wizard.step = 1;
+        render();
+      };
+      $("#toUpload").onclick = () => {
+        state.wizard.opts = {
+          proteger: $("#opt_proteger").checked,
+          metadados: $("#opt_metadados").checked,
+          phase: $("#opt_phase").checked,
+          compress: $("#opt_compress").checked,
+          decoyDb: parseFloat($("#decoyDb").value || "-24"),
+        };
+        state.wizard.whiteText = $("#whiteText").value || "";
+        const wf = $("#whiteFile").files[0];
+        state.wizard.whiteFile = wf || null;
+        state.wizard.step = 3;
+        render();
+      };
+    }
+    if (w.step === 3) {
       const drop = $("#drop");
       const input = $("#fileInput");
       const run = $("#runBtn");
@@ -491,8 +585,8 @@
         drop.classList.remove("drag");
         if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
       };
-      $("#back1").onclick = () => {
-        state.wizard.step = 1;
+      $("#backOpts").onclick = () => {
+        state.wizard.step = 2;
         render();
       };
       run.onclick = async () => {
@@ -506,12 +600,17 @@
         try {
           const res = await msApi.process(
             state.wizard.file,
-            state.wizard.platform
+            state.wizard.platform,
+            {
+              ...state.wizard.opts,
+              whiteText: state.wizard.whiteText,
+              whiteFile: state.wizard.whiteFile,
+            }
           );
           state.wizard.result = res;
           if (res.user) state.user = res.user;
-          state.wizard.step = 3;
-          toast("Proteção aplicada");
+          state.wizard.step = 4;
+          toast("Processamento concluído");
           render();
         } catch (e) {
           toast(e.message);
@@ -520,11 +619,25 @@
         }
       };
     }
-    if (w.step === 3) {
+    if (w.step === 4) {
       const ag = $("#again");
       if (ag) {
         ag.onclick = () => {
-          state.wizard = { step: 1, platform: null, file: null, result: null };
+          state.wizard = {
+            step: 1,
+            platform: null,
+            file: null,
+            whiteFile: null,
+            whiteText: "",
+            result: null,
+            opts: {
+              proteger: true,
+              metadados: true,
+              phase: true,
+              compress: true,
+              decoyDb: -24,
+            },
+          };
           render();
         };
       }

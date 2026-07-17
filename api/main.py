@@ -34,15 +34,10 @@ if ROOT not in sys.path:
 
 from api.sessions import create_session, destroy_session, get_user_id
 from auth.db import PLANS, User, get_db
-from core.pipeline import AudioShieldPipeline
-from core.presets_plataforma import config_para_plataforma, resumo_preset
+from core.pipeline_v2 import OpcoesProcessamento, processar_midia
 from ui.platforms import PLATFORMS
-from utils.audio_io import carregar_audio, salvar_audio
-from utils.video_io import (
-    extrair_audio_do_video,
-    ffmpeg_disponivel,
-    remux_audio_no_video,
-)
+from utils.audio_io import carregar_audio
+from utils.video_io import extrair_audio_do_video, ffmpeg_disponivel
 
 WEB_DIR = os.path.join(ROOT, "web")
 OUTPUT_DIR = os.path.join(ROOT, "output")
@@ -237,8 +232,18 @@ def admin_update_user(
 async def process_media(
     platform: str = Form("capcut"),
     file: UploadFile = File(...),
+    white_file: Optional[UploadFile] = File(None),
+    white_text: str = Form(""),
+    opt_proteger: str = Form("1"),
+    opt_metadados: str = Form("1"),
+    opt_phase: str = Form("1"),
+    opt_compress: str = Form("1"),
+    decoy_db: float = Form(-24.0),
     user: User = Depends(current_user),
 ):
+    """
+    Processa mídia com as 4 funções principais + cloaker black/white.
+    """
     fresh = get_db().get_by_id(user.id)
     if not fresh or not fresh.can_process:
         raise HTTPException(
@@ -254,6 +259,9 @@ async def process_media(
     ext = os.path.splitext(filename)[1].lower()
     is_video = ext in {".mp4", ".mov", ".mkv", ".webm", ".m4v", ".avi"}
 
+    def _flag(v: str) -> bool:
+        return str(v).lower() in ("1", "true", "yes", "on")
+
     tmp_dir = tempfile.mkdtemp(prefix="ms_")
     try:
         in_path = os.path.join(tmp_dir, f"in{ext or '.bin'}")
@@ -263,30 +271,47 @@ async def process_media(
         if is_video:
             if not ffmpeg_disponivel():
                 raise HTTPException(500, "ffmpeg indisponível no servidor")
-            y, sr, vmeta = extrair_audio_do_video(in_path, sr_alvo=48000)
+            y, sr, _vmeta = extrair_audio_do_video(in_path, sr_alvo=48000)
+            video_path = in_path
         else:
             y, sr = carregar_audio(in_path, sr_alvo=48000)
-            vmeta = None
+            video_path = None
 
-        cfg = config_para_plataforma(platform)
-        pipe = AudioShieldPipeline(cfg)
-        yp, rel = pipe.processar(y, sr, cfg, nome_arquivo=filename)
-        rel["preset_plataforma"] = resumo_preset(platform)
-        rel["platform"] = platform
+        # White copy (áudio enviado ou texto → sintético no pipeline)
+        white_audio = None
+        if white_file is not None:
+            wr = await white_file.read()
+            if wr:
+                wext = os.path.splitext(white_file.filename or "w.wav")[1] or ".wav"
+                wpath = os.path.join(tmp_dir, f"white{wext}")
+                with open(wpath, "wb") as f:
+                    f.write(wr)
+                white_audio, _ = carregar_audio(wpath, sr_alvo=sr)
 
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         base = f"ms_{user.id}_{ts}"
-        out_wav = os.path.join(OUTPUT_DIR, f"{base}.wav")
-        salvar_audio(out_wav, yp, sr)
+        opt = OpcoesProcessamento(
+            proteger_audio_ia=_flag(opt_proteger),
+            limpar_metadados=_flag(opt_metadados),
+            phase_stereo=_flag(opt_phase),
+            comprimir_video=_flag(opt_compress) and is_video,
+            usar_cloaker=_flag(opt_proteger),
+            decoy_db=float(decoy_db),
+            white_text=(white_text or "").strip()
+            or "Oferta especial. Confira as condicoes oficiais no site. Produto com garantia e suporte.",
+            anti_ia_leve=False,  # cloaker mantém áudio natural; anti-ia pesado estragava
+            platform=platform,
+        )
 
-        out_mp4 = None
-        if is_video:
-            out_mp4 = os.path.join(OUTPUT_DIR, f"{base}.mp4")
-            remux_audio_no_video(in_path, yp, sr, out_mp4)
-
-        # áudio original para compare (wav)
-        orig_wav = os.path.join(OUTPUT_DIR, f"{base}_orig.wav")
-        salvar_audio(orig_wav, y, sr)
+        result = processar_midia(
+            y,
+            sr,
+            audio_white=white_audio,
+            caminho_video=video_path,
+            out_dir=OUTPUT_DIR,
+            basename=base,
+            opcoes=opt,
+        )
 
         get_db().consume_video(
             user.id,
@@ -295,6 +320,10 @@ async def process_media(
             filename=filename,
         )
         fresh2 = get_db().get_by_id(user.id)
+
+        out_wav = result["audio_protected"]
+        orig_wav = result["audio_original"]
+        out_mp4 = result.get("video")
 
         return {
             "ok": True,
@@ -307,17 +336,13 @@ async def process_media(
             },
             "report": {
                 "platform": platform,
-                "preset": rel.get("preset_plataforma"),
-                "camadas": [
-                    {
-                        "camada": c.get("camada"),
-                        "nome": c.get("nome"),
-                        "aplicada": c.get("aplicada"),
-                        "modo": c.get("modo"),
-                    }
-                    for c in rel.get("camadas", [])
-                ],
-                "metricas": rel.get("metricas"),
+                "pipeline": "v2_cloaker",
+                "etapas": result.get("report", {}).get("etapas"),
+                "opcoes": result.get("report", {}).get("opcoes"),
+                "nota": (
+                    "Áudio principal (black) permanece audível. "
+                    "Copy white entra baixa para IA. Não é garantia 100% em todos os ASRs."
+                ),
             },
             "user": fresh2.to_dict() if fresh2 else None,
         }
@@ -327,7 +352,6 @@ async def process_media(
         traceback.print_exc()
         raise HTTPException(500, f"Falha no processamento: {e}") from e
     finally:
-        # limpa temp de entrada
         try:
             for name in os.listdir(tmp_dir):
                 os.unlink(os.path.join(tmp_dir, name))

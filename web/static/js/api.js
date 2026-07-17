@@ -66,10 +66,17 @@ window.msApi = {
       body: JSON.stringify(body),
     });
   },
-  process(file, platform) {
+  process(file, platform, opts = {}) {
     const fd = new FormData();
     fd.append("file", file);
     fd.append("platform", platform);
+    fd.append("opt_proteger", opts.proteger ? "1" : "0");
+    fd.append("opt_metadados", opts.metadados ? "1" : "0");
+    fd.append("opt_phase", opts.phase ? "1" : "0");
+    fd.append("opt_compress", opts.compress ? "1" : "0");
+    fd.append("decoy_db", String(opts.decoyDb ?? -24));
+    fd.append("white_text", opts.whiteText || "");
+    if (opts.whiteFile) fd.append("white_file", opts.whiteFile);
     return this.req("/api/process", { method: "POST", body: fd });
   },
 };

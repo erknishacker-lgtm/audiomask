@@ -1,0 +1,178 @@
+"""
+Pipeline MASK.SOUND v2 — funções principais.
+
+1. Proteger áudio contra IA (cloaker black/white + anti-legenda leve)
+2. Limpar metadados
+3. Phase-stereo avançado
+4. Compressão de vídeo perceptiva
+"""
+
+from __future__ import annotations
+
+import os
+from dataclasses import dataclass, field
+from typing import Any, Dict, Optional, Tuple
+
+import numpy as np
+
+from core.camada4_adversarial import ParametrosAdversarial, WatermarkingAdversarial
+from core.cloaker import CloakParams, aplicar_cloaker, gerar_decoy_sintetico
+from core.phase_stereo import PhaseStereoParams, mono_para_stereo_protegido
+from utils.audio_io import salvar_audio
+from utils.metadata import limpar_metadados
+from utils.video_compress import comprimir_video
+from utils.video_io import remux_audio_no_video
+
+
+# Texto white padrão (pode ser sobrescrito pelo usuário)
+WHITE_COPY_DEFAULT = (
+    "Oferta especial por tempo limitado. Confira as condicoes oficiais no site. "
+    "Produto de qualidade com garantia e suporte ao cliente. "
+    "Aproveite as condicoes de pagamento e frete conforme regulamento."
+)
+
+
+@dataclass
+class OpcoesProcessamento:
+    """Opções do popup principal."""
+
+    proteger_audio_ia: bool = True
+    limpar_metadados: bool = True
+    phase_stereo: bool = True
+    comprimir_video: bool = True
+    # Cloaker
+    usar_cloaker: bool = True
+    decoy_db: float = -24.0
+    white_text: str = WHITE_COPY_DEFAULT
+    # Anti-IA na principal: só modo stealth (não estraga áudio)
+    anti_ia_leve: bool = True
+    platform: str = "capcut"
+
+
+def processar_midia(
+    audio_principal: np.ndarray,
+    sr: int,
+    *,
+    audio_white: Optional[np.ndarray] = None,
+    caminho_video: Optional[str] = None,
+    out_dir: str,
+    basename: str,
+    opcoes: Optional[OpcoesProcessamento] = None,
+) -> Dict[str, Any]:
+    """
+    Processa áudio (e vídeo se houver) conforme opções.
+
+    Returns:
+        dict com paths, report, audio final
+    """
+    opt = opcoes or OpcoesProcessamento()
+    os.makedirs(out_dir, exist_ok=True)
+    report: Dict[str, Any] = {"opcoes": opt.__dict__.copy(), "etapas": []}
+
+    y = np.asarray(audio_principal, dtype=np.float32)
+    if y.ndim > 1:
+        y = np.mean(y, axis=0 if y.shape[0] <= 8 else 1).astype(np.float32)
+
+    # 1) Cloaker: principal (black) + white baixa
+    white_src = audio_white
+    if white_src is None and opt.usar_cloaker:
+        white_src = gerar_decoy_sintetico(opt.white_text, sr, duracao_s=len(y) / sr)
+
+    if opt.proteger_audio_ia and opt.usar_cloaker and white_src is not None:
+        y_mix, meta_c = aplicar_cloaker(
+            y, white_src, sr, CloakParams(decoy_db=opt.decoy_db)
+        )
+        report["etapas"].append({"cloaker": meta_c})
+        y_work = y_mix
+    else:
+        y_work = y
+        report["etapas"].append({"cloaker": False})
+
+    # Anti-IA leve na mistura (stealth) — não usa aggressive
+    if opt.proteger_audio_ia and opt.anti_ia_leve:
+        adv = WatermarkingAdversarial(
+            ParametrosAdversarial(forca="stealth", usar_whisper=False)
+        )
+        y_work, meta_a = adv.aplicar(y_work, sr)
+        report["etapas"].append({"anti_ia_leve": meta_a})
+    else:
+        report["etapas"].append({"anti_ia_leve": False})
+
+    # 3) Phase-stereo
+    audio_out_path = os.path.join(out_dir, f"{basename}.wav")
+    stereo = None
+    if opt.phase_stereo:
+        payload = white_src if white_src is not None else None
+        stereo, meta_ps = mono_para_stereo_protegido(
+            y_work, payload=payload, sr=sr, params=PhaseStereoParams(side_db=-30.0)
+        )
+        # salva stereo wav
+        try:
+            import soundfile as sf
+
+            sf.write(audio_out_path, stereo.T, sr, subtype="PCM_16")
+        except Exception:
+            salvar_audio(audio_out_path, y_work, sr)
+        report["etapas"].append({"phase_stereo": meta_ps})
+        audio_for_mux = y_work  # remux atual é mono; phase fica no wav stereo baixável
+    else:
+        salvar_audio(audio_out_path, y_work, sr)
+        report["etapas"].append({"phase_stereo": False})
+        audio_for_mux = y_work
+
+    # Salva também original para compare
+    orig_path = os.path.join(out_dir, f"{basename}_orig.wav")
+    salvar_audio(orig_path, y, sr)
+
+    out_mp4 = None
+    if caminho_video and os.path.isfile(caminho_video):
+        out_mp4 = os.path.join(out_dir, f"{basename}.mp4")
+        remux_audio_no_video(caminho_video, audio_for_mux, sr, out_mp4)
+
+        # 2) Metadados
+        if opt.limpar_metadados:
+            cleaned = os.path.join(out_dir, f"{basename}_clean.mp4")
+            limpar_metadados(out_mp4, cleaned)
+            os.replace(cleaned, out_mp4)
+            report["etapas"].append({"metadados": "limpo"})
+        else:
+            report["etapas"].append({"metadados": False})
+
+        # 4) Compressão
+        if opt.comprimir_video:
+            comp = os.path.join(out_dir, f"{basename}_comp.mp4")
+            comprimir_video(out_mp4, comp, crf=20, preset="medium")
+            os.replace(comp, out_mp4)
+            report["etapas"].append({"compressao": "crf20"})
+        else:
+            report["etapas"].append({"compressao": False})
+
+        # re-limpa meta após compress se ambos
+        if opt.limpar_metadados and opt.comprimir_video:
+            cleaned = os.path.join(out_dir, f"{basename}_clean2.mp4")
+            try:
+                limpar_metadados(out_mp4, cleaned)
+                os.replace(cleaned, out_mp4)
+            except Exception:
+                pass
+
+    # Se só áudio e limpar meta
+    if out_mp4 is None and opt.limpar_metadados:
+        # wav sem tags: regrava
+        tmp = os.path.join(out_dir, f"{basename}_tmp.wav")
+        salvar_audio(tmp, y_work if stereo is None else y_work, sr)
+        try:
+            limpar_metadados(tmp, audio_out_path)
+            os.unlink(tmp)
+            report["etapas"].append({"metadados_audio": True})
+        except Exception:
+            if os.path.isfile(tmp):
+                os.replace(tmp, audio_out_path)
+
+    return {
+        "audio_protected": audio_out_path,
+        "audio_original": orig_path,
+        "video": out_mp4,
+        "report": report,
+        "sample_rate": sr,
+    }
