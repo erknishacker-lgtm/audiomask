@@ -19,7 +19,7 @@
         phase: true,
         compress: true,
         decoyDb: -40,
-        cloakMode: "natural",
+        cloakMode: "auto",
       },
     },
     authTab: "login",
@@ -99,7 +99,7 @@
               phase: true,
               compress: true,
               decoyDb: -40,
-              cloakMode: "natural",
+              cloakMode: "auto",
             },
           };
         }
@@ -580,9 +580,10 @@
         <div class="panel panel-pad" style="margin-bottom:1rem">
           <div class="field"><label>Modo dual-layer</label>
             <select id="cloakMode">
-              <option value="natural" ${(o.cloakMode||'natural')==='natural'?'selected':''}>Natural — black 100% perfeita (CapCut ainda legenda black)</option>
-              <option value="white_only" ${(o.cloakMode||'')==='white_only'?'selected':''}>White only — CapCut legenda a white (você também ouve a white)</option>
-              <option value="redirect" ${(o.cloakMode||'')==='redirect'?'selected':''}>Redirect experimental — pode enganar alguns STT; áudio muda um pouco</option>
+              <option value="auto" ${(o.cloakMode||'auto')==='auto'?'selected':''}>Auto (recomendado) — loop Whisper até white vencer no score</option>
+              <option value="natural" ${(o.cloakMode||'')==='natural'?'selected':''}>Natural — black 100% limpa (STT ainda pode ler black)</option>
+              <option value="white_only" ${(o.cloakMode||'')==='white_only'?'selected':''}>White only — legenda white (humano também ouve white)</option>
+              <option value="redirect" ${(o.cloakMode||'')==='redirect'?'selected':''}>Redirect fixo (sem loop)</option>
             </select>
           </div>
           <label class="field" style="display:flex;gap:0.75rem;align-items:flex-start;cursor:pointer">
@@ -607,10 +608,13 @@
           </label>
         </div>
         <div class="panel panel-pad">
-          <h2 class="h2">Copy white (o que a IA deve “ouvir”)</h2>
-          <p class="lead" style="margin-bottom:0.75rem">Cole o texto da copy branca ou envie um áudio white gravado. Se vazio, geramos fala sintética limpa.</p>
-          <div class="field"><label>Texto white</label>
+          <h2 class="h2">Copy white + referência black</h2>
+          <p class="lead" style="margin-bottom:0.75rem">O otimizador usa Whisper para ver o que a IA leu e compara com as duas copys.</p>
+          <div class="field"><label>Texto white (safe — o que a IA deve preferir)</label>
             <textarea id="whiteText" placeholder="Ex.: Oferta especial. Confira as condições oficiais no site...">${escapeHtml(w.whiteText || "")}</textarea>
+          </div>
+          <div class="field"><label>Texto black (opcional — copy real, só para o score)</label>
+            <textarea id="blackText" placeholder="Ex.: Compre agora com 50% off..."></textarea>
           </div>
           <div class="field"><label>Áudio white (opcional)</label>
             <input type="file" id="whiteFile" accept="audio/*,.wav,.mp3,.m4a" />
@@ -654,14 +658,14 @@
         <div class="hint" style="border-color:rgba(61,214,140,0.4);background:rgba(61,214,140,0.08)">
           <strong>✓ Processamento concluído</strong>
         </div>
-        <p class="lead">Compare original vs protegido. Se usou modo Natural, o CapCut ainda pode legendar a black — isso é esperado. Para forçar legenda white, processe de novo em <strong>White only</strong>.</p>
+        ${renderSttPreview(r)}
         <div class="compare">
           <div class="box">
-            <h4>${t("original")}</h4>
+            <h4>${t("original")} (black)</h4>
             <audio controls src="${r.files.original_wav}"></audio>
           </div>
           <div class="box">
-            <h4>${t("protected")}</h4>
+            <h4>${t("protected")} (dual-layer)</h4>
             <audio controls src="${r.files.protected_wav}"></audio>
           </div>
         </div>
@@ -714,7 +718,8 @@
           phase: $("#opt_phase").checked,
           compress: $("#opt_compress").checked,
           decoyDb: parseFloat($("#decoyDb").value || "-40"),
-          cloakMode: $("#cloakMode").value || "natural",
+          cloakMode: $("#cloakMode").value || "auto",
+          blackText: $("#blackText").value || "",
         };
         state.wizard.whiteText = $("#whiteText").value || "";
         const wf = $("#whiteFile").files[0];
@@ -782,6 +787,7 @@
               ...state.wizard.opts,
               whiteText: state.wizard.whiteText,
               whiteFile: state.wizard.whiteFile,
+              blackText: (state.wizard.opts && state.wizard.opts.blackText) || "",
             }
           );
           run.classList.remove("is-loading");
@@ -821,13 +827,42 @@
               phase: true,
               compress: true,
               decoyDb: -40,
-              cloakMode: "natural",
+              cloakMode: "auto",
             },
           };
           render();
         };
       }
     }
+  }
+
+  function renderSttPreview(r) {
+    const p = (r && (r.stt_preview || (r.report && r.report.stt_preview))) || null;
+    if (!p) {
+      return `<p class="lead">Compare os áudios. Instale <code>openai-whisper</code> no servidor para o preview “IA leu”.</p>`;
+    }
+    const passed = p.passed;
+    const badge = passed
+      ? `<span class="chip" style="color:var(--ok);border-color:rgba(61,214,140,0.4)">✓ Score: white venceu no Whisper</span>`
+      : `<span class="chip" style="color:var(--warn);border-color:rgba(240,180,41,0.4)">⚠ Score: black ainda forte no Whisper</span>`;
+    const avail = p.stt_available
+      ? ""
+      : `<p style="color:var(--warn);font-size:0.9rem">Whisper não está no servidor — otimizador rodou sem feedback STT real.</p>`;
+    return `
+      <div class="dual-demo">
+        <div class="dual-box human">
+          <div class="who">HUMANO OUVE (black)</div>
+          <blockquote>Seu criativo original permanece a camada principal para o ouvido.</blockquote>
+        </div>
+        <div class="dual-box ai">
+          <div class="who">IA LEU (Whisper local)</div>
+          <blockquote>${escapeHtml(p.ai_heard || "(sem transcrição)")}</blockquote>
+          <p style="margin:0.5rem 0 0;font-size:0.8rem;color:var(--muted)">Vencedor no score: <strong>${escapeHtml(p.winner || "?")}</strong> · tentativas: ${p.attempts ?? "—"}</p>
+        </div>
+      </div>
+      <div style="margin:0.75rem 0 1rem">${badge}</div>
+      ${avail}
+      <p class="lead" style="font-size:0.9rem">${escapeHtml(p.honest_note || p.note || "")}</p>`;
   }
 
   function escapeHtml(s) {

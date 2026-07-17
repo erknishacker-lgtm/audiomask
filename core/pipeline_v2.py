@@ -17,6 +17,7 @@ import numpy as np
 
 from core.camada4_adversarial import ParametrosAdversarial, WatermarkingAdversarial
 from core.cloaker import CloakParams, aplicar_cloaker, gerar_decoy_sintetico
+from core.dual_layer_optimizer import OptimizeConfig, optimize_dual_layer
 from core.phase_stereo import PhaseStereoParams, mono_para_stereo_protegido
 from utils.audio_io import salvar_audio
 from utils.metadata import limpar_metadados
@@ -40,17 +41,17 @@ class OpcoesProcessamento:
     limpar_metadados: bool = True
     phase_stereo: bool = True
     comprimir_video: bool = True
-    # Cloaker
     usar_cloaker: bool = True
     decoy_db: float = -40.0
     white_text: str = WHITE_COPY_DEFAULT
+    black_text_hint: str = ""  # copy black para o score STT
     anti_ia_leve: bool = False
-    # natural = black perfeito (CapCut ainda legenda black)
-    # white_only = CapCut legenda white (humano também ouve white)
-    # redirect = experimental (pode piorar som e CapCut ainda acerta)
-    cloak_mode: str = "natural"
+    # auto = loop STT | natural | white_only | redirect
+    cloak_mode: str = "auto"
     stt_blend: float = 0.4
     black_scramble: float = 0.2
+    optimize_stt: bool = True
+    stt_max_attempts: int = 5
     platform: str = "capcut"
 
 
@@ -78,25 +79,63 @@ def processar_midia(
     if y.ndim > 1:
         y = np.mean(y, axis=0 if y.shape[0] <= 8 else 1).astype(np.float32)
 
-    # 1) Cloaker: principal (black) + white baixa
+    # 1) Dual-layer + otimizador STT (quando auto)
     white_src = audio_white
     if white_src is None and opt.usar_cloaker:
         white_src = gerar_decoy_sintetico(opt.white_text, sr, duracao_s=len(y) / sr)
 
+    stt_preview: Dict[str, Any] = {}
+    mode = (getattr(opt, "cloak_mode", "auto") or "auto").lower()
+
     if opt.proteger_audio_ia and opt.usar_cloaker and white_src is not None:
-        y_mix, meta_c = aplicar_cloaker(
-            y,
-            white_src,
-            sr,
-            CloakParams(
-                mode=getattr(opt, "cloak_mode", "natural") or "natural",
-                decoy_db=opt.decoy_db,
-                stt_blend=getattr(opt, "stt_blend", 0.4),
-                black_scramble=getattr(opt, "black_scramble", 0.2),
-            ),
-        )
-        report["etapas"].append({"cloaker": meta_c})
-        y_work = y_mix
+        if mode in ("auto", "optimize") or getattr(opt, "optimize_stt", False):
+            # Loop: gera → Whisper → ajusta
+            opt_res = optimize_dual_layer(
+                y,
+                sr,
+                opt.white_text or WHITE_COPY_DEFAULT,
+                white_audio=white_src,
+                black_text_hint=getattr(opt, "black_text_hint", "") or "",
+                config=OptimizeConfig(
+                    max_attempts=int(getattr(opt, "stt_max_attempts", 5) or 5),
+                    decoy_db=opt.decoy_db,
+                    language="pt",
+                    whisper_model="tiny",
+                ),
+            )
+            y_work = opt_res.audio
+            report["etapas"].append({"cloaker_optimizer": opt_res.meta})
+            stt_preview = {
+                "stt_available": opt_res.stt_available,
+                "passed": opt_res.passed,
+                "winner": opt_res.winner,
+                "ai_heard": opt_res.final_transcript,
+                "white_text": opt.white_text,
+                "black_text_hint": getattr(opt, "black_text_hint", "") or "",
+                "attempts": len(opt_res.attempts),
+                "honest_note": opt_res.meta.get("honest_note"),
+            }
+        else:
+            y_mix, meta_c = aplicar_cloaker(
+                y,
+                white_src,
+                sr,
+                CloakParams(
+                    mode=mode if mode in ("natural", "redirect", "white_only") else "natural",
+                    decoy_db=opt.decoy_db,
+                    stt_blend=getattr(opt, "stt_blend", 0.4),
+                    black_scramble=getattr(opt, "black_scramble", 0.2),
+                ),
+            )
+            report["etapas"].append({"cloaker": meta_c})
+            y_work = y_mix
+            stt_preview = {
+                "stt_available": False,
+                "passed": mode == "white_only",
+                "winner": "white" if mode == "white_only" else "black",
+                "ai_heard": "",
+                "note": f"modo fixo={mode} (sem loop STT)",
+            }
     else:
         y_work = y
         report["etapas"].append({"cloaker": False})
@@ -186,10 +225,12 @@ def processar_midia(
             if os.path.isfile(tmp):
                 os.replace(tmp, audio_out_path)
 
+    report["stt_preview"] = stt_preview
     return {
         "audio_protected": audio_out_path,
         "audio_original": orig_path,
         "video": out_mp4,
         "report": report,
+        "stt_preview": stt_preview,
         "sample_rate": sr,
     }

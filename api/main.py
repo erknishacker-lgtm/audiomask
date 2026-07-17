@@ -248,7 +248,8 @@ async def process_media(
     opt_phase: str = Form("1"),
     opt_compress: str = Form("1"),
     decoy_db: float = Form(-40.0),
-    cloak_mode: str = Form("natural"),
+    cloak_mode: str = Form("auto"),
+    black_text: str = Form(""),
     stt_blend: float = Form(0.4),
     user: User = Depends(current_user),
 ):
@@ -306,9 +307,9 @@ async def process_media(
             db = -40.0
         if db < -50.0:
             db = -50.0
-        mode = (cloak_mode or "natural").strip().lower()
-        if mode not in ("natural", "redirect", "white_only"):
-            mode = "natural"
+        mode = (cloak_mode or "auto").strip().lower()
+        if mode not in ("auto", "natural", "redirect", "white_only"):
+            mode = "auto"
         blend = float(max(0.2, min(0.55, float(stt_blend))))
         opt = OpcoesProcessamento(
             proteger_audio_ia=_flag(opt_proteger),
@@ -318,10 +319,12 @@ async def process_media(
             usar_cloaker=_flag(opt_proteger),
             decoy_db=db,
             cloak_mode=mode,
+            optimize_stt=(mode == "auto"),
             stt_blend=blend,
             black_scramble=0.2,
             white_text=(white_text or "").strip()
             or "Oferta especial. Confira as condicoes oficiais no site. Produto com garantia e suporte.",
+            black_text_hint=(black_text or "").strip(),
             anti_ia_leve=False,
             platform=platform,
         )
@@ -359,16 +362,19 @@ async def process_media(
             },
             "report": {
                 "platform": platform,
-                "pipeline": "v3_honest_dual_layer",
+                "pipeline": "v4_stt_optimizer",
                 "cloak_mode": mode,
                 "etapas": result.get("report", {}).get("etapas"),
                 "opcoes": result.get("report", {}).get("opcoes"),
+                "stt_preview": result.get("stt_preview")
+                or result.get("report", {}).get("stt_preview"),
                 "nota": (
-                    "natural = black perfeito (CapCut legenda black). "
-                    "white_only = CapCut legenda white (humano também ouve white). "
-                    "redirect = experimental."
+                    "auto = loop Whisper até white vencer black no score. "
+                    "white_only força white. natural = black limpa."
                 ),
             },
+            "stt_preview": result.get("stt_preview")
+            or result.get("report", {}).get("stt_preview"),
             "user": fresh2.to_dict() if fresh2 else None,
         }
     except HTTPException:
