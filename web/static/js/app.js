@@ -125,10 +125,207 @@
 
   /* ── views ── */
 
+  /* ── Auth ambient décor (fantasminhas + som bloqueado) ── */
+  let authDecorCleanup = null;
+
+  function stopAuthDecor() {
+    if (typeof authDecorCleanup === "function") {
+      try {
+        authDecorCleanup();
+      } catch (_) {}
+    }
+    authDecorCleanup = null;
+  }
+
+  function svgGhost() {
+    return `<svg viewBox="0 0 64 72" fill="none" aria-hidden="true">
+      <path d="M32 6c-14 0-24 10-24 26v28c0 3 2.2 4 4.2 2.4L20 56l6 6.5c1.4 1.5 3.6 1.5 5 0L32 56l1-1 6 6.5c1.4 1.5 3.6 1.5 5 0L50 56l7.8 6.4C59.8 64 62 63 62 60V32C62 16 52 6 32 6z" fill="currentColor" opacity="0.92"/>
+      <circle cx="24" cy="30" r="3.2" fill="#0a0a0a"/>
+      <circle cx="40" cy="30" r="3.2" fill="#0a0a0a"/>
+      <path d="M22 42h4v8h-4zm8-2h4v12h-4zm8 2h4v8h-4z" fill="#0a0a0a"/>
+    </svg>`;
+  }
+
+  function svgMute() {
+    return `<svg viewBox="0 0 48 48" fill="none" aria-hidden="true">
+      <path d="M10 18h8l10-8v28l-10-8h-8a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z" fill="currentColor" opacity="0.85"/>
+      <path d="M34 16l10 16M44 16L34 32" stroke="#ff5c5c" stroke-width="2.6" stroke-linecap="round"/>
+    </svg>`;
+  }
+
+  function svgWaves() {
+    return `<svg viewBox="0 0 72 36" fill="none" aria-hidden="true">
+      <path d="M6 18c4-8 8-8 12 0s8 8 12 0 8-8 12 0 8 8 12 0 8-8 12 0" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" opacity="0.7"/>
+      <path d="M10 18c3-5 6-5 9 0s6 5 9 0 6-5 9 0 6 5 9 0 6-5 9 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity="0.35"/>
+      <line x1="8" y1="30" x2="64" y2="6" stroke="#ff5c5c" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+    </svg>`;
+  }
+
+  function svgLock() {
+    return `<svg viewBox="0 0 40 40" fill="none" aria-hidden="true">
+      <rect x="10" y="18" width="20" height="16" rx="3" stroke="currentColor" stroke-width="2" fill="currentColor" fill-opacity="0.12"/>
+      <path d="M14 18v-4a6 6 0 0 1 12 0v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </svg>`;
+  }
+
+  function mountAuthDecor(root) {
+    stopAuthDecor();
+    const host = root.querySelector(".auth-decor");
+    if (!host) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      // still show static light décor
+    }
+
+    const items = [];
+    const mk = (cls, html, style) => {
+      const el = document.createElement("div");
+      el.className = `ad-item ${cls}`;
+      el.innerHTML = html;
+      Object.assign(el.style, style);
+      host.appendChild(el);
+      return el;
+    };
+
+    // fantasminhas andando em faixas
+    const ghostLanes = [
+      { y: 12, dir: 1, speed: 28, scale: 1, delay: 0 },
+      { y: 38, dir: -1, speed: 36, scale: 0.75, delay: 1.2 },
+      { y: 68, dir: 1, speed: 22, scale: 1.15, delay: 2.4 },
+      { y: 82, dir: -1, speed: 40, scale: 0.65, delay: 0.6 },
+      { y: 52, dir: 1, speed: 18, scale: 0.9, delay: 3.1 },
+    ];
+    ghostLanes.forEach((g, i) => {
+      const el = mk(
+        `ad-ghost${g.dir < 0 ? " flip" : ""}`,
+        svgGhost(),
+        {
+          top: `${g.y}%`,
+          left: g.dir > 0 ? "-8%" : "108%",
+          width: `${42 * g.scale}px`,
+          height: `${48 * g.scale}px`,
+          animationDelay: `${g.delay}s`,
+          opacity: String(0.35 + (i % 3) * 0.08),
+        }
+      );
+      items.push({
+        el,
+        kind: "ghost",
+        y: g.y,
+        dir: g.dir,
+        speed: g.speed,
+        x: g.dir > 0 ? -10 : 110,
+        bob: g.delay,
+      });
+    });
+
+    // ícones de som bloqueado flutuando
+    const mutes = [
+      { x: 8, y: 18 },
+      { x: 88, y: 28 },
+      { x: 14, y: 72 },
+      { x: 78, y: 78 },
+      { x: 50, y: 8 },
+    ];
+    mutes.forEach((m, i) => {
+      const wrap = mk(
+        "ad-mute",
+        `<div style="position:relative">${svgMute()}</div>`,
+        {
+          left: `${m.x}%`,
+          top: `${m.y}%`,
+          animationDelay: `${i * 0.7}s`,
+          animationDuration: `${5.5 + i * 0.4}s`,
+        }
+      );
+      items.push({ el: wrap, kind: "static" });
+    });
+
+    // ondas riscadas
+    [
+      { x: 6, y: 48 },
+      { x: 84, y: 58 },
+      { x: 70, y: 12 },
+    ].forEach((w, i) => {
+      mk("ad-wave", svgWaves(), {
+        left: `${w.x}%`,
+        top: `${w.y}%`,
+        animationDelay: `${i * 0.5}s`,
+      });
+    });
+
+    // equalizers “bloqueados”
+    [
+      { x: 22, y: 88 },
+      { x: 62, y: 90 },
+      { x: 42, y: 6 },
+    ].forEach((e, i) => {
+      const el = mk(
+        "ad-eq blocked",
+        `<span></span><span></span><span></span><span></span><span></span><div class="ad-slash"></div>`,
+        {
+          left: `${e.x}%`,
+          top: `${e.y}%`,
+          position: "absolute",
+          animationDelay: `${i * 0.2}s`,
+        }
+      );
+      el.style.position = "absolute";
+    });
+
+    // cadeados + sparks
+    [
+      { x: 30, y: 30 },
+      { x: 72, y: 42 },
+    ].forEach((l, i) => {
+      mk("ad-lock", svgLock(), {
+        left: `${l.x}%`,
+        top: `${l.y}%`,
+        animationDelay: `${i * 1.4}s`,
+      });
+    });
+    for (let i = 0; i < 10; i++) {
+      mk("ad-spark", "", {
+        left: `${8 + Math.random() * 84}%`,
+        top: `${8 + Math.random() * 84}%`,
+        animationDelay: `${Math.random() * 3}s`,
+        animationDuration: `${3 + Math.random() * 3}s`,
+      });
+    }
+
+    let raf = 0;
+    let last = performance.now();
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const tick = (now) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      if (!reduced) {
+        items.forEach((it) => {
+          if (it.kind !== "ghost") return;
+          it.x += it.dir * it.speed * dt;
+          if (it.dir > 0 && it.x > 112) it.x = -12;
+          if (it.dir < 0 && it.x < -12) it.x = 112;
+          const bob = Math.sin(now / 500 + it.bob) * 6;
+          const flip = it.dir < 0 ? " scaleX(-1)" : "";
+          it.el.style.left = `${it.x}%`;
+          it.el.style.transform = `translateY(${bob}px)${flip}`;
+        });
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+
+    authDecorCleanup = () => {
+      cancelAnimationFrame(raf);
+      host.innerHTML = "";
+    };
+  }
+
   function viewAuth() {
     const tab = state.authTab;
     app.innerHTML = `
       <div class="auth-wrap fade-in">
+        <div class="auth-decor" aria-hidden="true"></div>
         <div class="auth-card">
           <img class="auth-logo" src="/assets/logo.png" alt="GhostWave" width="112" height="112" />
           <h1>GhostWave</h1>
@@ -153,6 +350,7 @@
           <p class="auth-foot">2 grátis/dia · Mensal R$ 59,90 · Trimestral R$ 129,90 · Anual R$ 299</p>
         </div>
       </div>`;
+    mountAuthDecor(app);
     bindLang();
     $$(".tab").forEach((b) => {
       b.onclick = () => {
@@ -177,6 +375,7 @@
         const data = await msApi.login(email, password);
         state.user = data.user;
         state.view = "dashboard";
+        stopAuthDecor();
         render();
       } catch (err) {
         toast(err.message || "Erro");
@@ -882,6 +1081,8 @@
   }
 
   async function render() {
+    if (state.view !== "auth") stopAuthDecor();
+
     if (state.view === "boot") {
       app.innerHTML = `<div class="auth-wrap"><div class="spinner"></div></div>`;
       try {
