@@ -18,7 +18,7 @@ import numpy as np
 
 @dataclass
 class PhaseStereoParams:
-    side_db: float = -28.0  # nível do canal side vs mid
+    side_db: float = -38.0  # side bem abaixo do limiar perceptivo
     invert_side: bool = True
     seed: int = 11
 

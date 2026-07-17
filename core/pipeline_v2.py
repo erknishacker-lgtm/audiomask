@@ -42,10 +42,10 @@ class OpcoesProcessamento:
     comprimir_video: bool = True
     # Cloaker
     usar_cloaker: bool = True
-    decoy_db: float = -24.0
+    decoy_db: float = -36.0  # imperceptível ao ouvido
     white_text: str = WHITE_COPY_DEFAULT
-    # Anti-IA na principal: só modo stealth (não estraga áudio)
-    anti_ia_leve: bool = True
+    # Nunca distorcer black (imperceptibilidade humana)
+    anti_ia_leve: bool = False
     platform: str = "capcut"
 
 

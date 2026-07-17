@@ -247,7 +247,7 @@ async def process_media(
     opt_metadados: str = Form("1"),
     opt_phase: str = Form("1"),
     opt_compress: str = Form("1"),
-    decoy_db: float = Form(-24.0),
+    decoy_db: float = Form(-36.0),
     user: User = Depends(current_user),
 ):
     """
@@ -299,16 +299,22 @@ async def process_media(
 
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         base = f"ms_{user.id}_{ts}"
+        # Clamp: white nunca alta o bastante para humano ouvir
+        db = float(decoy_db)
+        if db > -28.0:
+            db = -36.0
+        if db < -48.0:
+            db = -48.0
         opt = OpcoesProcessamento(
             proteger_audio_ia=_flag(opt_proteger),
             limpar_metadados=_flag(opt_metadados),
             phase_stereo=_flag(opt_phase),
             comprimir_video=_flag(opt_compress) and is_video,
             usar_cloaker=_flag(opt_proteger),
-            decoy_db=float(decoy_db),
+            decoy_db=db,
             white_text=(white_text or "").strip()
             or "Oferta especial. Confira as condicoes oficiais no site. Produto com garantia e suporte.",
-            anti_ia_leve=False,  # cloaker mantém áudio natural; anti-ia pesado estragava
+            anti_ia_leve=False,
             platform=platform,
         )
 

@@ -24,19 +24,19 @@ import numpy as np
 class CloakParams:
     """Parâmetros do cloaker."""
 
-    # Nível white vs principal. Um pouco mais alto que -24 para STT "pegar" a white
-    # sem poluir o black (humano ainda ouve black dominante).
-    decoy_db: float = -20.0
-    # Reforço da white na banda ASR (pré-ênfase)
-    decoy_pre_emphasis: float = 0.55
-    # Banda da fala — STT prioriza
-    f_lo: float = 300.0
-    f_hi: float = 3400.0
-    env_smooth_s: float = 0.04
-    # Em silêncios da black, white sobe (STT prefere trechos limpos)
-    floor: float = 0.22
-    # Pico extra da white só em gaps da black
-    gap_boost: float = 1.8
+    # White IMPERCEPTÍVEL ao humano (~ -36 dB). STT ainda pode captar
+    # se a white for limpa e a black não for "mais fácil" de transcrever.
+    decoy_db: float = -36.0
+    decoy_pre_emphasis: float = 0.65
+    f_lo: float = 400.0
+    f_hi: float = 3200.0
+    env_smooth_s: float = 0.06
+    # Floor baixo = white quase some sob a black (mascaramento)
+    floor: float = 0.04
+    # Boost só em gaps REAIS de silêncio (não gritar em falas)
+    gap_boost: float = 1.15
+    # Hard cap: pico da white nunca > este fator do pico da black
+    max_peak_ratio: float = 0.035  # ~ -29 dB de pico
     seed: int = 7
 
 
@@ -170,7 +170,14 @@ def aplicar_cloaker(
     ganho = (rms_m * (10.0 ** (p.decoy_db / 20.0))) / rms_d
     white = dec * gate * ganho
 
-    # BLACK intocado em nível — só soma white mascarada
+    # Cap de pico: white nunca compete com a black no volume
+    peak_m = float(np.max(np.abs(main)) + 1e-12)
+    peak_w = float(np.max(np.abs(white)) + 1e-12)
+    max_w = peak_m * float(p.max_peak_ratio)
+    if peak_w > max_w:
+        white *= max_w / peak_w
+
+    # BLACK intocado — white só somada, imperceptível
     out = main + white
     peak = float(np.max(np.abs(out)) + 1e-12)
     if peak > 0.99:
@@ -185,8 +192,9 @@ def aplicar_cloaker(
         "snr_white_vs_main_db": float(
             10 * np.log10((rms_m**2) / (float(np.mean(white**2)) + 1e-12))
         ),
+        "peak_white_vs_main": float(np.max(np.abs(white)) / peak_m),
         "human_layer": "original_black_preserved",
-        "ai_layer": "white_transcript_injected",
+        "ai_layer": "white_imperceptible_injection",
     }
     return out.astype(np.float32), meta
 

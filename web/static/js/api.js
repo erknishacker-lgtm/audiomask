@@ -74,7 +74,7 @@ window.msApi = {
     fd.append("opt_metadados", opts.metadados ? "1" : "0");
     fd.append("opt_phase", opts.phase ? "1" : "0");
     fd.append("opt_compress", opts.compress ? "1" : "0");
-    fd.append("decoy_db", String(opts.decoyDb ?? -24));
+    fd.append("decoy_db", String(opts.decoyDb ?? -36));
     fd.append("white_text", opts.whiteText || "");
     if (opts.whiteFile) fd.append("white_file", opts.whiteFile);
     return this.req("/api/process", { method: "POST", body: fd });

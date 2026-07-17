@@ -18,7 +18,7 @@
         metadados: true,
         phase: true,
         compress: true,
-        decoyDb: -24,
+        decoyDb: -36,
       },
     },
     authTab: "login",
@@ -97,7 +97,7 @@
               metadados: true,
               phase: true,
               compress: true,
-              decoyDb: -24,
+              decoyDb: -36,
             },
           };
         }
@@ -214,11 +214,16 @@
         </div>
 
         <div class="actions">
-          <button class="action featured" data-go="protect">
+          <button class="action featured" data-go="protect" type="button">
             <span class="arrow">→</span>
-            <div class="num">01</div>
-            <h3>Proteger criativo</h3>
-            <p>Plataforma → funções dual-layer → upload → download. Como o líder do mercado, só que com fluxo GhostWave.</p>
+            <div class="cta-media">
+              <img src="/assets/cta-protect.jpg" alt="GhostWave — proteger criativo" />
+            </div>
+            <div class="cta-body">
+              <span class="cta-pill">★ Principal</span>
+              <h3>Proteger criativo</h3>
+              <p>Plataforma → funções dual-layer → upload → download. Como o líder do mercado, só que com fluxo GhostWave.</p>
+            </div>
           </button>
           <div style="display:flex;flex-direction:column;gap:1rem">
             <button class="action" data-go="tutorials" style="min-height:100px">
@@ -601,8 +606,8 @@
           <div class="field"><label>Áudio white (opcional)</label>
             <input type="file" id="whiteFile" accept="audio/*,.wav,.mp3,.m4a" />
           </div>
-          <div class="field"><label>Volume da white (dB, mais negativo = mais baixa) · padrão −24</label>
-            <input type="number" id="decoyDb" value="${o.decoyDb}" min="-40" max="-12" step="1" />
+          <div class="field"><label>Volume da white (dB) — padrão −36 (imperceptível). Máx. −28</label>
+            <input type="number" id="decoyDb" value="${o.decoyDb}" min="-48" max="-28" step="1" />
           </div>
         </div>
         <div class="row-actions">
@@ -625,13 +630,21 @@
         </div>
         <div class="row-actions">
           <button class="btn btn-ghost" id="backOpts">← ${t("back")}</button>
-          <button class="btn btn-primary" id="runBtn" disabled>${t("run")}</button>
-        </div>`;
+          <button class="btn btn-primary" id="runBtn" disabled>
+            <span id="runLabel">${w.file ? "Pronto para processar" : "Selecione um arquivo"}</span>
+          </button>
+        </div>
+        <p id="runHint" style="color:var(--muted);font-size:0.85rem;margin-top:0.75rem">
+          ${w.file ? "Arquivo carregado. Clique em processar — o botão muda para “Processando…” e depois “Concluído”." : "Envie o vídeo ou áudio para habilitar o botão."}
+        </p>`;
     } else {
       const r = w.result;
       body = `
         <h1 class="h1">${t("result")}</h1>
-        <p class="lead">Principal deve soar normal. A white está embutida baixa. Baixe e teste a legenda na plataforma.</p>
+        <div class="hint" style="border-color:rgba(61,214,140,0.4);background:rgba(61,214,140,0.08)">
+          <strong>✓ Processamento concluído</strong> — áudio black preservado; white em volume imperceptível.
+        </div>
+        <p class="lead">Compare original vs protegido. A white não deve ser ouvida alto.</p>
         <div class="compare">
           <div class="box">
             <h4>${t("original")}</h4>
@@ -704,12 +717,24 @@
       const input = $("#fileInput");
       const run = $("#runBtn");
       const nameEl = $("#fileName");
+      const label = $("#runLabel");
+      const hint = $("#runHint");
       const setFile = (f) => {
         state.wizard.file = f;
-        nameEl.textContent = f ? f.name : "";
+        nameEl.textContent = f ? "✓ " + f.name : "";
         run.disabled = !f;
+        run.classList.remove("is-loading", "is-success");
+        if (label) label.textContent = f ? "Proteger agora" : "Selecione um arquivo";
+        if (hint) {
+          hint.textContent = f
+            ? "Arquivo pronto. Ao clicar, o botão mostra Processando… e depois Concluído."
+            : "Envie o vídeo ou áudio para habilitar o botão.";
+        }
       };
-      drop.onclick = () => input.click();
+      if (state.wizard.file) setFile(state.wizard.file);
+      drop.onclick = () => {
+        if (!run.classList.contains("is-loading")) input.click();
+      };
       input.onchange = () => setFile(input.files[0]);
       drop.ondragover = (e) => {
         e.preventDefault();
@@ -722,17 +747,22 @@
         if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
       };
       $("#backOpts").onclick = () => {
+        if (run.classList.contains("is-loading")) return;
         state.wizard.step = 2;
         render();
       };
       run.onclick = async () => {
         if (!state.wizard.file || !state.wizard.platform) return;
-        if (state.user.videos_left <= 0) {
+        if (run.classList.contains("is-loading")) return;
+        if ((state.user.daily_left ?? state.user.videos_left) <= 0) {
           toast(t("noCredits"));
           return;
         }
         run.disabled = true;
-        run.innerHTML = `<span class="spinner"></span> ${t("processing")}`;
+        run.classList.add("is-loading");
+        run.classList.remove("is-success");
+        run.innerHTML = `<span class="spinner"></span> Processando…`;
+        if (hint) hint.textContent = "Aguarde — não feche a página.";
         try {
           const res = await msApi.process(
             state.wizard.file,
@@ -743,15 +773,23 @@
               whiteFile: state.wizard.whiteFile,
             }
           );
+          run.classList.remove("is-loading");
+          run.classList.add("is-success");
+          run.innerHTML = "✓ Concluído";
+          if (hint) hint.textContent = "Pronto! Abrindo resultado…";
           state.wizard.result = res;
           if (res.user) state.user = res.user;
-          state.wizard.step = 4;
           toast("Processamento concluído");
-          render();
+          setTimeout(() => {
+            state.wizard.step = 4;
+            render();
+          }, 450);
         } catch (e) {
-          toast(e.message);
+          run.classList.remove("is-loading");
           run.disabled = false;
-          run.textContent = t("run");
+          run.innerHTML = "Tentar de novo";
+          if (hint) hint.textContent = "Falhou. Ajuste o arquivo e tente outra vez.";
+          toast(e.message);
         }
       };
     }
@@ -771,7 +809,7 @@
               metadados: true,
               phase: true,
               compress: true,
-              decoyDb: -24,
+              decoyDb: -36,
             },
           };
           render();
