@@ -368,63 +368,43 @@ def aplicar_cloaker(
         return y.astype(np.float32), meta
 
     if mode in ("anti_analise", "anti-analise", "anti_analysis", "ads"):
-        # Black dona do áudio + white sob mascaramento + micro-scramble leve
-        # Referência de mercado (arquivo shielded): secondary ~−20…−22 dB vs primary
+        # Black dona do áudio + white em FALA (TTS) sob mascaramento.
+        # SEM micro-scramble: scramble vira “barulho” e mata a voz da copy.
+        # Ref. mercado: secondary ~−20…−22 dB vs primary
         decoy = float(p.decoy_db)
         if decoy <= -38.0:
             decoy = -22.0
         p_aa = CloakParams(
             mode="anti_analise",
             decoy_db=decoy,
-            decoy_pre_emphasis=p.decoy_pre_emphasis,
+            decoy_pre_emphasis=0.15,  # leve — pre-emphasis forte = chiado
             f_lo=p.f_lo,
             f_hi=p.f_hi,
             n_fft=p.n_fft,
             hop=p.hop,
             env_smooth_s=p.env_smooth_s,
-            floor=max(p.floor, 0.06),
-            max_peak_ratio=max(p.max_peak_ratio, 0.12),
+            floor=max(p.floor, 0.08),
+            max_peak_ratio=max(p.max_peak_ratio, 0.18),
             seed=p.seed,
-            # micro_scramble baixo: demais vira "barulho" e mata a inteligibilidade da white
-            micro_scramble=min(
-                0.12,
-                p.micro_scramble if p.micro_scramble > 0 else 0.06,
-            ),
-            mask_under_speech=p.mask_under_speech if p.mask_under_speech > 0 else 0.85,
+            micro_scramble=0.0,
+            mask_under_speech=p.mask_under_speech if p.mask_under_speech > 0 else 0.9,
         )
         y = _inject_masked_white(main, dec, sr, p_aa)
-        # scramble bem suave — só na black residual, sem destruir a fala white
-        y = _micro_scramble_stt_band(y, sr, p_aa, rng)
-
-        # reforço residual bem baixo (watermark extra, quase inaudível)
-        y = _inject_quiet_white(
-            y,
-            dec,
-            sr,
-            CloakParams(
-                decoy_db=min(-38.0, p_aa.decoy_db - 8.0),
-                max_peak_ratio=0.025,
-                env_smooth_s=p_aa.env_smooth_s,
-                floor=0.03,
-                seed=p.seed + 3,
-            ),
-        )
         corr = float(np.corrcoef(main, y)[0, 1]) if len(main) > 8 else 1.0
         meta = {
             "cloaker": True,
-            "engine": "anti_analise_masked_white_plus_micro_scramble",
+            "engine": "anti_analise_tts_speech_under_black",
             "mode": "anti_analise",
             "decoy_db": p_aa.decoy_db,
-            "micro_scramble": p_aa.micro_scramble,
+            "micro_scramble": 0.0,
             "mask_under_speech": p_aa.mask_under_speech,
             "corr_vs_black": corr,
-            "human_hears": "black",
+            "human_hears": "black_plus_quiet_speech",
             "capcut_likely_hears": "mostly_black",
             "ads_robot_target": "confuse_audio_extract",
             "nota": (
-                "Anti-análise: black principal + white dinâmica sob a fala + "
-                "micro-scramble na banda de voz. Mira robô de ads (proxy STT), "
-                "não garante aprovação. Humano deve ouvir a black."
+                "Anti-análise: black principal + copy white em FALA (TTS) a ~−22 dB. "
+                "Sem scramble. Humano ouve black; secondary é voz baixa da white, não ruído."
             ),
         }
         peak = float(np.max(np.abs(y)) + 1e-12)

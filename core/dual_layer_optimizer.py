@@ -293,9 +293,9 @@ def optimize_anti_analise(
             CloakParams(
                 mode="anti_analise",
                 decoy_db=float(np.clip(db, -36.0, -18.0)),
-                micro_scramble=min(0.22, micro0 + i * 0.03),
-                mask_under_speech=min(0.95, 0.80 + i * 0.03),
-                max_peak_ratio=0.12 + i * 0.015,
+                micro_scramble=0.0,  # scramble destruía a voz white
+                mask_under_speech=min(0.95, 0.85 + i * 0.02),
+                max_peak_ratio=0.16 + i * 0.02,
                 seed=31 + i,
             )
         )

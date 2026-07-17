@@ -241,6 +241,33 @@ def _tts_espeak(text: str, sr: int, lang: str) -> Tuple[Optional[np.ndarray], st
             pass
 
 
+def _tts_gtts(text: str, sr: int, lang: str) -> Tuple[Optional[np.ndarray], str]:
+    """Google TTS (precisa rede). Fallback útil no Docker se edge-tts falhar."""
+    try:
+        from gtts import gTTS
+    except Exception as e:
+        return None, f"gTTS indisponível: {e}"
+    lang_map = {"pt": "pt", "en": "en", "es": "es"}
+    gl = lang_map.get(lang, "pt")
+    tmp = tempfile.mkdtemp(prefix="gw_gtts_")
+    mp3 = os.path.join(tmp, "speech.mp3")
+    try:
+        gTTS(text=text, lang=gl).save(mp3)
+        if not os.path.isfile(mp3) or os.path.getsize(mp3) < 100:
+            return None, "gTTS não gerou arquivo"
+        y = _load_audio_any(mp3, sr)
+        return _normalize(y), f"gtts:{gl}"
+    except Exception as e:
+        return None, f"gTTS falhou: {e}"
+    finally:
+        try:
+            if os.path.isfile(mp3):
+                os.unlink(mp3)
+            os.rmdir(tmp)
+        except Exception:
+            pass
+
+
 def _tts_formant_fallback(
     texto: str, sr: int, duracao_s: Optional[float], f0: float = 160.0
 ) -> np.ndarray:
@@ -313,7 +340,7 @@ def gerar_fala_white(
     lang = _detect_lang(text, language)
     errors = []
 
-    for fn in (_tts_edge, _tts_macos_say, _tts_espeak):
+    for fn in (_tts_edge, _tts_gtts, _tts_macos_say, _tts_espeak):
         y, detail = fn(text, sr, lang)
         if y is not None and len(y) > sr * 0.3:
             y = _fit_duration(y, sr, duracao_s)

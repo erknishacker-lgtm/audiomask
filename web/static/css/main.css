@@ -493,6 +493,66 @@ img { max-width: 100%; display: block; }
 .btn.is-success:hover {
   filter: brightness(1.05);
 }
+
+/* progresso 0–100% do processar */
+.process-panel {
+  text-align: center;
+  max-width: 520px;
+  margin: 0 auto;
+}
+.process-pct {
+  font-size: 3rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin: 0.25rem 0 1rem;
+  font-variant-numeric: tabular-nums;
+}
+.process-bar {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  margin: 0 auto 1rem;
+}
+.process-bar-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #fff 0%, #d4af37 100%);
+  transition: width 0.28s var(--ease);
+  box-shadow: 0 0 16px rgba(212, 175, 55, 0.35);
+}
+.process-stage {
+  margin: 0 0 0.35rem;
+  color: var(--ink);
+  font-weight: 600;
+}
+.process-file {
+  margin: 0 0 1.25rem;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--faint);
+  word-break: break-all;
+}
+.process-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: center;
+}
+.process-steps span {
+  font-size: 0.72rem;
+  padding: 0.3rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--faint);
+}
+.process-steps span.on {
+  color: var(--ink);
+  border-color: rgba(212, 175, 55, 0.45);
+  background: rgba(212, 175, 55, 0.1);
+}
 .action .num {
   font-family: var(--mono);
   font-size: 0.7rem;

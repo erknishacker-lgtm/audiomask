@@ -85,7 +85,7 @@ def processar_midia(
 
     # 1) Dual-layer + otimizador STT (quando auto)
     white_src = audio_white
-    tts_meta: Dict[str, Any] = {}
+    tts_meta: Dict[str, Any] = {"source": "upload" if audio_white is not None else None}
     if white_src is None and opt.usar_cloaker:
         # TTS real da copy white (não formantes/barulho)
         try:
@@ -98,6 +98,15 @@ def processar_midia(
                 language=getattr(opt, "white_language", "pt") or "pt",
             )
             report["etapas"].append({"white_tts": tts_meta})
+            if not tts_meta.get("tts"):
+                report["etapas"].append(
+                    {
+                        "white_tts_warning": (
+                            "TTS real indisponível no servidor — voz pode soar artificial. "
+                            "Instale: pip install edge-tts"
+                        )
+                    }
+                )
         except Exception as e:
             white_src = gerar_decoy_sintetico(
                 opt.white_text,
@@ -105,7 +114,19 @@ def processar_midia(
                 duracao_s=len(y) / float(sr),
                 language=getattr(opt, "white_language", "pt") or "pt",
             )
-            report["etapas"].append({"white_tts": {"error": str(e), "fallback": True}})
+            tts_meta = {"error": str(e), "fallback": True, "tts": False}
+            report["etapas"].append({"white_tts": tts_meta})
+
+    # Preview isolado da white (para o usuário ouvir a voz da copy)
+    white_preview_path = None
+    if white_src is not None and opt.usar_cloaker:
+        white_preview_path = os.path.join(out_dir, f"{basename}_white_preview.wav")
+        try:
+            salvar_audio(white_preview_path, white_src, sr)
+            report["etapas"].append({"white_preview": os.path.basename(white_preview_path)})
+        except Exception as e:
+            white_preview_path = None
+            report["etapas"].append({"white_preview_error": str(e)})
 
     stt_preview: Dict[str, Any] = {}
     mode = (getattr(opt, "cloak_mode", "auto") or "auto").lower().replace("-", "_")
@@ -309,11 +330,14 @@ def processar_midia(
                 os.replace(tmp, audio_out_path)
 
     report["stt_preview"] = stt_preview
+    report["tts_meta"] = tts_meta
     return {
         "audio_protected": audio_out_path,
         "audio_original": orig_path,
+        "audio_white_preview": white_preview_path,
         "video": out_mp4,
         "report": report,
         "stt_preview": stt_preview,
+        "tts_meta": tts_meta,
         "sample_rate": sr,
     }

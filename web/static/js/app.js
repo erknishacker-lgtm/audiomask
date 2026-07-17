@@ -1076,10 +1076,35 @@
       const plat = state.platforms.find((p) => p.id === w.platform) || {
         name: w.platform,
       };
-      body = `
+      if (w.processing) {
+        const pct = Math.max(0, Math.min(100, Number(w.progressPct) || 0));
+        const stage = w.progressStage || "Preparando…";
+        body = `
+        <h1 class="h1">Processando criativo</h1>
+        <p class="lead">Um clique já iniciou. Não precisa clicar de novo — aguarde chegar a 100%.</p>
+        <div class="panel panel-pad process-panel">
+          <div class="process-pct" id="processPct">${pct}%</div>
+          <div class="process-bar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100">
+            <div class="process-bar-fill" id="processBarFill" style="width:${pct}%"></div>
+          </div>
+          <p class="process-stage" id="processStage">${escapeHtml(stage)}</p>
+          <p class="process-file">${escapeHtml((w.file && w.file.name) || "arquivo")}</p>
+          <div class="process-steps">
+            <span class="${pct >= 5 ? "on" : ""}">Upload</span>
+            <span class="${pct >= 25 ? "on" : ""}">TTS white</span>
+            <span class="${pct >= 55 ? "on" : ""}">Cloaker</span>
+            <span class="${pct >= 85 ? "on" : ""}">Vídeo</span>
+            <span class="${pct >= 100 ? "on" : ""}">Pronto</span>
+          </div>
+        </div>
+        <p id="runHint" style="color:var(--muted);font-size:0.85rem;margin-top:1rem;text-align:center">
+          Não feche a página. Ao chegar em 100% o resultado abre sozinho.
+        </p>`;
+      } else {
+        body = `
         <h1 class="h1">${t("uploadTitle")}</h1>
         <p class="lead">${t("uploadSub")}</p>
-        <div class="hint"><strong>${escapeHtml(plat.name)}</strong> — black audível + white baixa para ASR. Compare o resultado antes de subir na plataforma.</div>
+        <div class="hint"><strong>${escapeHtml(plat.name)}</strong> — black audível + white em fala (TTS) baixa. Compare o resultado antes de subir na plataforma.</div>
         <div class="drop" id="drop">
           <strong>${t("drop")}</strong>
           <span>${t("dropHint")}</span>
@@ -1088,13 +1113,14 @@
         </div>
         <div class="row-actions">
           <button class="btn btn-ghost" id="backOpts">← ${t("back")}</button>
-          <button class="btn btn-primary" id="runBtn" disabled>
-            <span id="runLabel">${w.file ? "Pronto para processar" : "Selecione um arquivo"}</span>
+          <button class="btn btn-primary" id="runBtn" ${w.file ? "" : "disabled"}>
+            <span id="runLabel">${w.file ? "Proteger agora" : "Selecione um arquivo"}</span>
           </button>
         </div>
         <p id="runHint" style="color:var(--muted);font-size:0.85rem;margin-top:0.75rem">
-          ${w.file ? "Arquivo carregado. Clique em processar — o botão muda para “Processando…” e depois “Concluído”." : "Envie o vídeo ou áudio para habilitar o botão."}
+          ${w.file ? "Clique uma vez em Proteger agora. A barra de progresso vai de 0% a 100% e o vídeo é entregue ao terminar." : "Envie o vídeo ou áudio para habilitar o botão."}
         </p>`;
+      }
     } else {
       const r = w.result;
       body = `
@@ -1103,6 +1129,15 @@
           <strong>✓ Processamento concluído</strong>
         </div>
         ${renderSttPreview(r)}
+        ${
+          r.tts_meta
+            ? `<div class="hint" style="margin-bottom:1rem">${
+                r.tts_meta.tts
+                  ? `✓ Voz white (TTS): <strong>${escapeHtml(r.tts_meta.engine || "ok")}</strong>`
+                  : `⚠ TTS real não rodou — pode soar artificial. No servidor: <code>pip install edge-tts gTTS</code>`
+              }</div>`
+            : ""
+        }
         <div class="compare">
           <div class="box">
             <h4>${t("original")} (black)</h4>
@@ -1112,6 +1147,15 @@
             <h4>${t("protected")} (dual-layer)</h4>
             <audio controls src="${r.files.protected_wav}"></audio>
           </div>
+          ${
+            r.files.white_preview_wav
+              ? `<div class="box">
+            <h4>White isolada (voz da copy)</h4>
+            <audio controls src="${r.files.white_preview_wav}"></audio>
+            <p style="margin:0.4rem 0 0;font-size:0.8rem;color:var(--muted)">Só a secondary — deve ser fala, não barulho.</p>
+          </div>`
+              : ""
+          }
         </div>
         ${
           r.files.protected_mp4
@@ -1123,6 +1167,11 @@
           ${
             r.files.protected_mp4
               ? `<a class="btn" href="${r.files.protected_mp4}" download>${t("downloadMp4")}</a>`
+              : ""
+          }
+          ${
+            r.files.white_preview_wav
+              ? `<a class="btn btn-ghost" href="${r.files.white_preview_wav}" download>Baixar white (voz)</a>`
               : ""
           }
           <button class="btn btn-ghost" id="again">${t("again")}</button>
@@ -1180,6 +1229,18 @@
       };
     }
     if (w.step === 3) {
+      // se já está processando, só sincroniza a barra (sem re-bind de upload)
+      if (w.processing) {
+        const fill = $("#processBarFill");
+        const pctEl = $("#processPct");
+        const stageEl = $("#processStage");
+        const pct = Math.max(0, Math.min(100, Number(w.progressPct) || 0));
+        if (fill) fill.style.width = pct + "%";
+        if (pctEl) pctEl.textContent = Math.floor(pct) + "%";
+        if (stageEl) stageEl.textContent = w.progressStage || "Processando…";
+        return;
+      }
+
       const drop = $("#drop");
       const input = $("#fileInput");
       const run = $("#runBtn");
@@ -1188,79 +1249,40 @@
       const hint = $("#runHint");
       const setFile = (f) => {
         state.wizard.file = f;
-        nameEl.textContent = f ? "✓ " + f.name : "";
-        run.disabled = !f;
-        run.classList.remove("is-loading", "is-success");
+        if (nameEl) nameEl.textContent = f ? "✓ " + f.name : "";
+        if (run) run.disabled = !f;
         if (label) label.textContent = f ? "Proteger agora" : "Selecione um arquivo";
         if (hint) {
           hint.textContent = f
-            ? "Arquivo pronto. Ao clicar, o botão mostra Processando… e depois Concluído."
+            ? "Clique uma vez em Proteger agora. Progresso 0%→100% e entrega automática."
             : "Envie o vídeo ou áudio para habilitar o botão.";
         }
       };
       if (state.wizard.file) setFile(state.wizard.file);
-      drop.onclick = () => {
-        if (!run.classList.contains("is-loading")) input.click();
-      };
-      input.onchange = () => setFile(input.files[0]);
-      drop.ondragover = (e) => {
-        e.preventDefault();
-        drop.classList.add("drag");
-      };
-      drop.ondragleave = () => drop.classList.remove("drag");
-      drop.ondrop = (e) => {
-        e.preventDefault();
-        drop.classList.remove("drag");
-        if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
-      };
-      $("#backOpts").onclick = () => {
-        if (run.classList.contains("is-loading")) return;
-        state.wizard.step = 2;
-        render();
-      };
-      run.onclick = async () => {
-        if (!state.wizard.file || !state.wizard.platform) return;
-        if (run.classList.contains("is-loading")) return;
-        if ((state.user.daily_left ?? state.user.videos_left) <= 0) {
-          toast(t("noCredits"));
-          return;
-        }
-        run.disabled = true;
-        run.classList.add("is-loading");
-        run.classList.remove("is-success");
-        run.innerHTML = `<span class="spinner"></span> Processando…`;
-        if (hint) hint.textContent = "Aguarde — não feche a página.";
-        try {
-          const res = await msApi.process(
-            state.wizard.file,
-            state.wizard.platform,
-            {
-              ...state.wizard.opts,
-              whiteText: state.wizard.whiteText,
-              whiteLang: state.wizard.whiteLang || "pt",
-              whiteFile: state.wizard.whiteFile,
-              blackText: (state.wizard.opts && state.wizard.opts.blackText) || "",
-            }
-          );
-          run.classList.remove("is-loading");
-          run.classList.add("is-success");
-          run.innerHTML = "✓ Concluído";
-          if (hint) hint.textContent = "Pronto! Abrindo resultado…";
-          state.wizard.result = res;
-          if (res.user) state.user = res.user;
-          toast("Processamento concluído");
-          setTimeout(() => {
-            state.wizard.step = 4;
-            render();
-          }, 450);
-        } catch (e) {
-          run.classList.remove("is-loading");
-          run.disabled = false;
-          run.innerHTML = "Tentar de novo";
-          if (hint) hint.textContent = "Falhou. Ajuste o arquivo e tente outra vez.";
-          toast(e.message);
-        }
-      };
+      if (drop && input) {
+        drop.onclick = () => input.click();
+        input.onchange = () => setFile(input.files[0]);
+        drop.ondragover = (e) => {
+          e.preventDefault();
+          drop.classList.add("drag");
+        };
+        drop.ondragleave = () => drop.classList.remove("drag");
+        drop.ondrop = (e) => {
+          e.preventDefault();
+          drop.classList.remove("drag");
+          if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+        };
+      }
+      const back = $("#backOpts");
+      if (back) {
+        back.onclick = () => {
+          state.wizard.step = 2;
+          render();
+        };
+      }
+      if (run) {
+        run.onclick = () => startProtectProcess();
+      }
     }
     if (w.step === 4) {
       const ag = $("#again");
@@ -1329,6 +1351,101 @@
   }
   function escapeAttr(s) {
     return escapeHtml(s).replace(/'/g, "&#39;");
+  }
+
+  /** Atualiza barra 0–100 sem re-render completo (evita perder o job). */
+  function setProcessProgress(pct, stage) {
+    const p = Math.max(0, Math.min(100, Number(pct) || 0));
+    state.wizard.progressPct = p;
+    if (stage) state.wizard.progressStage = stage;
+    const fill = document.getElementById("processBarFill");
+    const pctEl = document.getElementById("processPct");
+    const stageEl = document.getElementById("processStage");
+    if (fill) fill.style.width = p + "%";
+    if (pctEl) pctEl.textContent = Math.floor(p) + "%";
+    if (stageEl && stage) stageEl.textContent = stage;
+    // acende chips de etapa se existirem
+    document.querySelectorAll(".process-steps span").forEach((el, i) => {
+      const thr = [5, 25, 55, 85, 100][i] || 100;
+      el.classList.toggle("on", p >= thr);
+    });
+  }
+
+  /**
+   * Um clique em "Proteger agora":
+   * mostra progresso 0→100 e só entrega o resultado quando a API terminar.
+   * Não precisa clicar de novo.
+   */
+  async function startProtectProcess() {
+    const w = state.wizard;
+    if (w.processing) return;
+    if (!w.file || !w.platform) {
+      toast("Selecione o arquivo e a plataforma.");
+      return;
+    }
+    if ((state.user.daily_left ?? state.user.videos_left) <= 0) {
+      toast(t("noCredits"));
+      return;
+    }
+
+    w.processing = true;
+    w.progressPct = 0;
+    w.progressStage = "Enviando arquivo…";
+    render(); // entra na tela de progresso
+
+    let fake = 0;
+    const stages = [
+      [8, "Enviando arquivo…"],
+      [22, "Gerando voz white (TTS)…"],
+      [48, "Aplicando dual-layer…"],
+      [68, "Otimizando camadas…"],
+      [82, "Montando vídeo…"],
+      [92, "Finalizando…"],
+    ];
+    const tick = setInterval(() => {
+      // sobe sozinho até 92%; os 100% só quando a API responder
+      if (fake < 92) {
+        const step = fake < 30 ? 1.8 : fake < 60 ? 1.1 : 0.55;
+        fake = Math.min(92, fake + step);
+        let stage = w.progressStage;
+        for (const [th, label] of stages) {
+          if (fake >= th) stage = label;
+        }
+        setProcessProgress(fake, stage);
+      }
+    }, 280);
+
+    try {
+      const res = await msApi.process(w.file, w.platform, {
+        proteger: w.opts?.proteger !== false,
+        metadados: w.opts?.metadados !== false,
+        phase: w.opts?.phase !== false,
+        compress: w.opts?.compress !== false,
+        decoyDb: w.opts?.decoyDb ?? -22,
+        cloakMode: w.opts?.cloakMode || "anti_analise",
+        whiteText: w.whiteText || defaultWhiteText(w.whiteLang || "pt"),
+        whiteLang: w.whiteLang || "pt",
+        whiteFile: w.whiteFile || null,
+        blackText: (w.opts && w.opts.blackText) || "",
+      });
+      clearInterval(tick);
+      setProcessProgress(100, "Concluído — abrindo resultado…");
+      await new Promise((r) => setTimeout(r, 450));
+      w.processing = false;
+      w.progressPct = 100;
+      w.result = res;
+      if (res.user) state.user = res.user;
+      toast("Processamento concluído");
+      w.step = 4;
+      render();
+    } catch (e) {
+      clearInterval(tick);
+      w.processing = false;
+      w.progressPct = 0;
+      w.progressStage = "";
+      render();
+      toast(e.message || "Falha no processamento");
+    }
   }
 
   async function render() {

@@ -70,16 +70,25 @@ window.msApi = {
     const fd = new FormData();
     fd.append("file", file);
     fd.append("platform", platform);
-    fd.append("opt_proteger", opts.proteger ? "1" : "0");
-    fd.append("opt_metadados", opts.metadados ? "1" : "0");
-    fd.append("opt_phase", opts.phase ? "1" : "0");
-    fd.append("opt_compress", opts.compress ? "1" : "0");
-    fd.append("decoy_db", String(opts.decoyDb ?? -40));
-    fd.append("cloak_mode", opts.cloakMode || "auto");
+    // default true se não vier explícito (evita processar “sem cloaker”)
+    const on = (v) => (v === false || v === 0 || v === "0" ? "0" : "1");
+    fd.append("opt_proteger", on(opts.proteger));
+    fd.append("opt_metadados", on(opts.metadados));
+    fd.append("opt_phase", on(opts.phase));
+    fd.append("opt_compress", on(opts.compress));
+    fd.append("decoy_db", String(opts.decoyDb ?? -22));
+    fd.append("cloak_mode", opts.cloakMode || "anti_analise");
     fd.append("white_text", opts.whiteText || "");
     fd.append("black_text", opts.blackText || "");
     fd.append("white_language", opts.whiteLang || opts.whiteLanguage || "pt");
     if (opts.whiteFile) fd.append("white_file", opts.whiteFile);
-    return this.req("/api/process", { method: "POST", body: fd });
+    // timeout longo: TTS + vídeo podem passar de 2 min
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 15 * 60 * 1000);
+    return this.req("/api/process", {
+      method: "POST",
+      body: fd,
+      signal: ctrl.signal,
+    }).finally(() => clearTimeout(timer));
   },
 };

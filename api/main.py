@@ -339,7 +339,7 @@ async def process_media(
             anti_ia_leve=False,
             platform=platform,
             anti_decoy_db=anti_db,
-            micro_scramble=0.06 if mode == "anti_analise" else 0.0,
+            micro_scramble=0.0,  # scramble matava a voz da white
             white_language=(white_language or "pt").strip().lower()[:5] or "pt",
         )
 
@@ -364,33 +364,39 @@ async def process_media(
         out_wav = result["audio_protected"]
         orig_wav = result["audio_original"]
         out_mp4 = result.get("video")
+        white_prev = result.get("audio_white_preview")
+        tts_meta = result.get("tts_meta") or result.get("report", {}).get("tts_meta")
 
         return {
             "ok": True,
             "files": {
                 "protected_wav": f"/api/files/{os.path.basename(out_wav)}",
                 "original_wav": f"/api/files/{os.path.basename(orig_wav)}",
+                "white_preview_wav": (
+                    f"/api/files/{os.path.basename(white_prev)}" if white_prev else None
+                ),
                 "protected_mp4": (
                     f"/api/files/{os.path.basename(out_mp4)}" if out_mp4 else None
                 ),
             },
             "report": {
                 "platform": platform,
-                "pipeline": "v5_anti_analise",
+                "pipeline": "v6_tts_speech_white",
                 "cloak_mode": mode,
                 "etapas": result.get("report", {}).get("etapas"),
                 "opcoes": result.get("report", {}).get("opcoes"),
+                "tts_meta": tts_meta,
                 "stt_preview": result.get("stt_preview")
                 or result.get("report", {}).get("stt_preview"),
                 "nota": (
-                    "auto = loop Whisper até white vencer black no score. "
-                    "anti_analise = black normal + white sob mascaramento + micro-scramble "
-                    "(mira robô de ads; não garante aprovação). "
-                    "white_only força white. natural = black limpa + watermark."
+                    "White é gerada com TTS (voz da copy), não barulho. "
+                    "anti_analise: black + fala white baixa (~−22 dB). "
+                    "Ouça white_preview_wav para validar a voz isolada."
                 ),
             },
             "stt_preview": result.get("stt_preview")
             or result.get("report", {}).get("stt_preview"),
+            "tts_meta": tts_meta,
             "user": fresh2.to_dict() if fresh2 else None,
         }
     except HTTPException:
