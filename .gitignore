@@ -8,6 +8,8 @@ output/*
 !output/.gitkeep
 reports/*
 !reports/.gitkeep
+data/*.db
+!data/.gitkeep
 tests/_tmp_*.wav
 *.mp3
 .streamlit/secrets.toml

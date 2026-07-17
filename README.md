@@ -1,3 +1,26 @@
+# AudioMask / AudioShield — Proteção Invisível de Áudio
+
+## Conta admin (padrão)
+
+| Campo | Valor |
+|--------|--------|
+| E-mail | `admin@audiomask.com` |
+| Senha | `Admin@AudioMask2026` |
+
+**Troque a senha em produção** (painel admin → editar usuário).
+
+### Planos
+- **Free:** 2 vídeos grátis  
+- **Pro:** R$ 49,90 · cota prática ilimitada (admin ativa)
+
+### App
+- Login / cadastro  
+- Seletor de idioma PT / EN  
+- Fluxo: plataforma (Facebook, TikTok, Kwai…) → upload → proteção → download  
+- Painel admin: usuários, planos, limites  
+
+---
+
 # AudioShield — Proteção Invisível Avançada
 
 Sistema completo de **proteção de áudio em 4 camadas**, com interface Streamlit, dashboard espectral, export WAV/MP3, **vídeo MP4** e modo adversarial (Whisper).

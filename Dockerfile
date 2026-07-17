@@ -25,7 +25,7 @@ RUN pip install --upgrade pip \
 
 COPY . .
 
-RUN mkdir -p output reports tests \
+RUN mkdir -p output reports tests data \
     && python tests/gerar_sample.py || true
 
 EXPOSE 8501
