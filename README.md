@@ -15,11 +15,20 @@ Marca: **MASK.SOUND** · logo em `assets/logo.png` · tema carvão + ciano (fund
 - **Free:** 2 vídeos grátis  
 - **Pro:** R$ 49,90 · cota prática ilimitada (admin ativa)
 
-### App
-- Login / cadastro  
-- Seletor de idioma PT / EN  
-- Fluxo: plataforma (Facebook, TikTok, Kwai…) → upload → proteção → download  
-- Painel admin: usuários, planos, limites  
+### App web (principal)
+Frontend premium em `web/` + API FastAPI em `api/`.
+
+```bash
+pip install -r requirements.txt
+uvicorn api.main:app --host 0.0.0.0 --port 8501
+# abra http://localhost:8501
+```
+
+- Login / cadastro · PT / EN  
+- Dashboard moderno · proteger mídia · conta · admin  
+- CapCut / TikTok / redes com preset anti-legenda  
+
+Streamlit legado: `streamlit run app.py` (opcional).
 
 ---
 
