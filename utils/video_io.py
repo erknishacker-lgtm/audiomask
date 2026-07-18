@@ -24,6 +24,29 @@ from utils.audio_io import carregar_audio, salvar_audio
 VIDEO_EXTS = {".mp4", ".mov", ".mkv", ".webm", ".m4v", ".avi"}
 
 
+def _salvar_wav_flex(caminho: str, audio: np.ndarray, sr: int) -> str:
+    """
+    Salva WAV mono ou estéreo sem forçar mono.
+    Aceita (N,), (N,2), (2,N).
+    """
+    import soundfile as sf
+
+    x = np.asarray(audio, dtype=np.float32)
+    if x.ndim == 1:
+        y = x
+    elif x.ndim == 2:
+        if x.shape[0] <= 8 and x.shape[0] < x.shape[1]:
+            # (ch, N) → (N, ch)
+            y = x.T
+        else:
+            y = x  # (N, ch)
+    else:
+        y = x.reshape(-1)
+    y = np.clip(y, -1.0, 1.0)
+    sf.write(caminho, y, int(sr), subtype="PCM_16")
+    return caminho
+
+
 def ffmpeg_disponivel() -> bool:
     """Retorna True se o binário ffmpeg estiver no PATH."""
     return shutil.which("ffmpeg") is not None
@@ -150,7 +173,8 @@ def remux_audio_no_video(
 
     with tempfile.TemporaryDirectory(prefix="audioshield_mux_") as tmp:
         wav_path = os.path.join(tmp, "protegido.wav")
-        salvar_audio(wav_path, audio, sr, formato="wav")
+        # preserva estéreo (mid/side invert) — NÃO forçar mono
+        _salvar_wav_flex(wav_path, audio, sr)
 
         # -map 0:v  vídeo do original
         # -map 1:a  áudio do WAV protegido
@@ -177,6 +201,10 @@ def remux_audio_no_video(
             codec_audio,
             "-b:a",
             bitrate_audio,
+            "-ac",
+            "2",  # força estéreo no MP4 (truque mid/side)
+            "-ar",
+            str(int(sr)),
             "-shortest",
             "-movflags",
             "+faststart",

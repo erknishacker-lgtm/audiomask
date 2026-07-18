@@ -18,7 +18,11 @@ import numpy as np
 from core.camada4_adversarial import ParametrosAdversarial, WatermarkingAdversarial
 from core.cloaker import CloakParams, aplicar_cloaker, gerar_decoy_sintetico
 from core.dual_layer_optimizer import OptimizeConfig, optimize_dual_layer
-from core.phase_stereo import PhaseStereoParams, mono_para_stereo_protegido
+from core.phase_stereo import (
+    PhaseStereoParams,
+    encode_mid_side_cloak,
+    mono_para_stereo_protegido,
+)
 from utils.audio_io import salvar_audio
 from utils.metadata import limpar_metadados
 from utils.video_compress import comprimir_video
@@ -252,13 +256,39 @@ def processar_midia(
     else:
         report["etapas"].append({"anti_ia_leve": False})
 
-    # 3) Phase-stereo
+    # 3) Phase-stereo / mid-side invert (igual arquivo pago *_shielded.mp4)
     audio_out_path = os.path.join(out_dir, f"{basename}.wav")
     stereo = None
-    # Vídeo/CapCut usa downmix mono: white deve SOMAR nos canais (não cancelar).
-    # Phase-stereo aqui reforça white em fase nos dois lados (L=R+payload baixo).
-    if opt.phase_stereo and white_src is not None:
-        # anti_analise: side um pouco mais presente (ainda sutil) com white no payload
+    # TRUQUE DO MERCADO (TikTok mono):
+    #   L = black + white,  R = -black + white
+    #   mono (L+R)/2 ≈ white  → robô ouve a copy white
+    #   estéreo side ≈ black  → humano ouve o anúncio
+    use_ms_invert = (
+        opt.phase_stereo
+        and white_src is not None
+        and mode in ("anti_analise", "auto", "redirect", "natural")
+        and mode != "white_only"
+    )
+    if use_ms_invert:
+        # black limpa = original do criativo (y), não o mono misturado
+        black_src = y
+        w_db = float(getattr(opt, "anti_decoy_db", -22.0) or -22.0)
+        if mode == "natural":
+            w_db = float(opt.decoy_db or -40.0)
+        stereo, meta_ps = encode_mid_side_cloak(
+            black_src, white_src, sr=sr, white_db=w_db
+        )
+        try:
+            import soundfile as sf
+
+            # soundfile: (N, ch)
+            sf.write(audio_out_path, stereo.T, sr, subtype="PCM_16")
+        except Exception:
+            salvar_audio(audio_out_path, y_work, sr)
+        report["etapas"].append({"phase_stereo": meta_ps})
+        # VÍDEO leva o ESTÉREO invertido (não mono com black!)
+        audio_for_mux = stereo
+    elif opt.phase_stereo and white_src is not None:
         side_db = -30.0 if mode == "anti_analise" else -34.0
         stereo, meta_ps = mono_para_stereo_protegido(
             y_work,
@@ -273,8 +303,7 @@ def processar_midia(
         except Exception:
             salvar_audio(audio_out_path, y_work, sr)
         report["etapas"].append({"phase_stereo": meta_ps})
-        # Mux do vídeo: mono dual-layer (é o que CapCut analisa)
-        audio_for_mux = y_work
+        audio_for_mux = stereo
     else:
         salvar_audio(audio_out_path, y_work, sr)
         report["etapas"].append({"phase_stereo": False})
