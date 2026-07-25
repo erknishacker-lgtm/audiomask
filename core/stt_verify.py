@@ -77,6 +77,10 @@ class STTEngine:
         y = np.asarray(audio, dtype=np.float32).flatten()
         if sr != 16000:
             y = _resample(y, sr, 16000)
+        # Cap em 30s: vídeo longo no Whisper estoura tempo/memória e alucina texto
+        max_samples = 16000 * 30
+        if len(y) > max_samples:
+            y = y[:max_samples]
         # normaliza
         peak = float(np.max(np.abs(y)) + 1e-12)
         y = y / peak * 0.95
@@ -88,8 +92,16 @@ class STTEngine:
             if self._backend != "openai" or self._model is None:
                 self._model = whisper.load_model(self.model_size)
                 self._backend = "openai"
-            r = self._model.transcribe(y, fp16=False, language=language)
+            r = self._model.transcribe(
+                y,
+                fp16=False,
+                language=language,
+                condition_on_previous_text=False,
+            )
             text = (r.get("text") or "").strip()
+            # corta alucinação monstro no preview
+            if len(text) > 600:
+                text = text[:597] + "..."
             return STTResult(text=text, backend="openai-whisper", ok=True)
         except Exception as e1:
             err1 = str(e1)

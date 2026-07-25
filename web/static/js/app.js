@@ -1575,21 +1575,28 @@
             "Resposta inválida do servidor"
         );
       }
-      if (!res.files || !res.files.protected_wav) {
+      const files = (res && res.files) || {};
+      if (!files.protected_wav && !files.protected_mp4) {
         throw new Error(
-          "O servidor respondeu sem o arquivo protegido. Veja o log da API / ffmpeg."
+          "O servidor respondeu sem arquivos. Veja o log da API (ffmpeg/TTS)."
         );
       }
       setProcessProgress(100, "Concluído — abrindo resultado…");
-      await new Promise((r) => setTimeout(r, 450));
+      await new Promise((r) => setTimeout(r, 350));
       w.processing = false;
       w.progressPct = 100;
       w.processError = "";
       w.result = res;
       if (res.user) state.user = res.user;
-      toast("Processamento concluído");
       w.step = 4;
-      render();
+      toast("Processamento concluído");
+      // Se a tela de resultado falhar por bug de UI, NÃO tratar como falha do processar
+      try {
+        render();
+      } catch (renderErr) {
+        console.error("result render error", renderErr);
+        showEmergencyResult(res);
+      }
     } catch (e) {
       console.error("process error", e);
       w.processing = false;
@@ -1600,7 +1607,6 @@
         msg =
           "Tempo esgotado (15 min). O vídeo é muito longo ou o servidor travou no Whisper/ffmpeg.";
       }
-      // FastAPI às vezes devolve detail como lista
       if (msg.startsWith("[") || msg.startsWith("{")) {
         try {
           const parsed = JSON.parse(msg);
@@ -1612,11 +1618,69 @@
         } catch (_) {}
       }
       w.processError = msg;
-      render();
+      try {
+        render();
+      } catch (re) {
+        console.error(re);
+        toast(msg);
+        app.innerHTML = `<div class="shell"><div class="hint process-error"><strong>Erro</strong><br/>${escapeHtml(
+          msg
+        )}</div><button class="btn" data-go="dashboard">Início</button></div>`;
+        bindNav();
+      }
       toast(msg);
     } finally {
       clearInterval(tick);
     }
+  }
+
+  /** Fallback mínimo se a tela de resultado normal quebrar */
+  function showEmergencyResult(res) {
+    const files = (res && res.files) || {};
+    const links = [];
+    if (files.protected_mp4) {
+      links.push(
+        `<a class="btn btn-primary" href="${escapeAttr(
+          files.protected_mp4
+        )}" download>Baixar vídeo MP4</a>`
+      );
+    }
+    if (files.protected_wav) {
+      links.push(
+        `<a class="btn" href="${escapeAttr(
+          files.protected_wav
+        )}" download>Baixar áudio WAV</a>`
+      );
+    }
+    if (files.white_preview_wav) {
+      links.push(
+        `<a class="btn btn-ghost" href="${escapeAttr(
+          files.white_preview_wav
+        )}" download>Baixar white</a>`
+      );
+    }
+    app.innerHTML = `
+      <div class="shell fade-in">
+        <h1 class="h1">Pronto</h1>
+        <div class="hint result-ok"><strong>Processamento concluído</strong> (tela simplificada)</div>
+        <div class="result-dl panel panel-pad">
+          <div class="row-actions" style="margin-top:0">${
+            links.join(" ") || "<p>Sem links de arquivo.</p>"
+          }</div>
+          ${
+            files.protected_mp4
+              ? `<video controls playsinline style="width:100%;margin-top:1rem;border-radius:10px" src="${escapeAttr(
+                  files.protected_mp4
+                )}"></video>`
+              : ""
+          }
+        </div>
+        <div class="row-actions">
+          <button class="btn btn-primary" data-go="protect" type="button">Novo arquivo</button>
+          <button class="btn btn-ghost" data-go="dashboard" type="button">Início</button>
+        </div>
+      </div>`;
+    bindNav();
   }
 
   async function render() {

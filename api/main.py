@@ -341,6 +341,8 @@ async def process_media(
             anti_decoy_db=anti_db,
             micro_scramble=0.0,  # scramble matava a voz da white
             white_language=(white_language or "pt").strip().lower()[:5] or "pt",
+            # 1 tentativa no anti_analise: evita travar 5x Whisper em vídeo longo
+            stt_max_attempts=1 if mode == "anti_analise" else 3,
         )
 
         result = processar_midia(

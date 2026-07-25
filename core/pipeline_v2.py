@@ -139,7 +139,10 @@ def processar_midia(
 
     if opt.proteger_audio_ia and opt.usar_cloaker and white_src is not None:
         if mode == "anti_analise":
-            # Loop de confusão (proxy robô de ads) — não exige white 100%
+            # 1 tentativa: confusão + entrega rápida (antes: 5 loops Whisper
+            # em vídeo longo travava e o front parecia “quebrado”).
+            attempts = int(getattr(opt, "stt_max_attempts", 1) or 1)
+            attempts = max(1, min(3, attempts))
             opt_res = optimize_dual_layer(
                 y,
                 sr,
@@ -147,7 +150,7 @@ def processar_midia(
                 white_audio=white_src,
                 black_text_hint=getattr(opt, "black_text_hint", "") or "",
                 config=OptimizeConfig(
-                    max_attempts=int(getattr(opt, "stt_max_attempts", 5) or 5),
+                    max_attempts=attempts,
                     decoy_db=opt.decoy_db,
                     anti_decoy_db=float(getattr(opt, "anti_decoy_db", -22.0) or -22.0),
                     micro_scramble_start=float(getattr(opt, "micro_scramble", 0.08) or 0.08),
@@ -316,48 +319,86 @@ def processar_midia(
     out_mp4 = None
     if caminho_video and os.path.isfile(caminho_video):
         out_mp4 = os.path.join(out_dir, f"{basename}.mp4")
+        # Remux é o passo crítico: se falhar, propaga. Pós-passos NÃO podem
+        # apagar o sucesso (antes: limpar meta/compress falhava → 500 sem MP4).
         remux_audio_no_video(caminho_video, audio_for_mux, sr, out_mp4)
+        report["etapas"].append({"remux": "ok", "path": os.path.basename(out_mp4)})
 
-        # 2) Metadados
+        # 2) Metadados (best-effort)
         if opt.limpar_metadados:
             cleaned = os.path.join(out_dir, f"{basename}_clean.mp4")
-            limpar_metadados(out_mp4, cleaned)
-            os.replace(cleaned, out_mp4)
-            report["etapas"].append({"metadados": "limpo"})
+            try:
+                limpar_metadados(out_mp4, cleaned)
+                if os.path.isfile(cleaned) and os.path.getsize(cleaned) > 0:
+                    os.replace(cleaned, out_mp4)
+                    report["etapas"].append({"metadados": "limpo"})
+                else:
+                    report["etapas"].append({"metadados": "skip_empty"})
+            except Exception as e:
+                report["etapas"].append({"metadados": "skip", "error": str(e)[:200]})
+                try:
+                    if os.path.isfile(cleaned):
+                        os.unlink(cleaned)
+                except OSError:
+                    pass
         else:
             report["etapas"].append({"metadados": False})
 
-        # 4) Compressão
+        # 4) Compressão (best-effort — never drop remuxed file)
         if opt.comprimir_video:
             comp = os.path.join(out_dir, f"{basename}_comp.mp4")
-            # veryfast: encerra bem mais rápido; CRF 20 mantém qualidade de anúncio
-            comprimir_video(out_mp4, comp, crf=20, preset="veryfast")
-            os.replace(comp, out_mp4)
-            report["etapas"].append({"compressao": "crf20"})
+            try:
+                comprimir_video(out_mp4, comp, crf=20, preset="veryfast")
+                if os.path.isfile(comp) and os.path.getsize(comp) > 0:
+                    os.replace(comp, out_mp4)
+                    report["etapas"].append({"compressao": "crf20_veryfast"})
+                else:
+                    report["etapas"].append({"compressao": "skip_empty"})
+            except Exception as e:
+                report["etapas"].append({"compressao": "skip", "error": str(e)[:200]})
+                try:
+                    if os.path.isfile(comp):
+                        os.unlink(comp)
+                except OSError:
+                    pass
         else:
             report["etapas"].append({"compressao": False})
 
-        # re-limpa meta após compress se ambos
+        # re-limpa meta após compress se ambos (best-effort)
         if opt.limpar_metadados and opt.comprimir_video:
             cleaned = os.path.join(out_dir, f"{basename}_clean2.mp4")
             try:
                 limpar_metadados(out_mp4, cleaned)
-                os.replace(cleaned, out_mp4)
+                if os.path.isfile(cleaned) and os.path.getsize(cleaned) > 0:
+                    os.replace(cleaned, out_mp4)
             except Exception:
-                pass
+                try:
+                    if os.path.isfile(cleaned):
+                        os.unlink(cleaned)
+                except OSError:
+                    pass
+
+        if not os.path.isfile(out_mp4) or os.path.getsize(out_mp4) <= 0:
+            out_mp4 = None
+            report["etapas"].append({"video_error": "arquivo final ausente após remux"})
 
     # Se só áudio e limpar meta
     if out_mp4 is None and opt.limpar_metadados:
-        # wav sem tags: regrava
+        # wav sem tags: regrava (best-effort)
         tmp = os.path.join(out_dir, f"{basename}_tmp.wav")
-        salvar_audio(tmp, y_work if stereo is None else y_work, sr)
         try:
+            salvar_audio(tmp, y_work if stereo is None else y_work, sr)
             limpar_metadados(tmp, audio_out_path)
-            os.unlink(tmp)
-            report["etapas"].append({"metadados_audio": True})
-        except Exception:
             if os.path.isfile(tmp):
-                os.replace(tmp, audio_out_path)
+                os.unlink(tmp)
+            report["etapas"].append({"metadados_audio": True})
+        except Exception as e:
+            report["etapas"].append({"metadados_audio": "skip", "error": str(e)[:200]})
+            if os.path.isfile(tmp):
+                try:
+                    os.replace(tmp, audio_out_path)
+                except OSError:
+                    pass
 
     report["stt_preview"] = stt_preview
     report["tts_meta"] = tts_meta
