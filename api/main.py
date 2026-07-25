@@ -429,6 +429,8 @@ def get_file(name: str, user: User = Depends(current_user)):
         media = "video/mp4"
     elif safe.endswith(".mp3"):
         media = "audio/mpeg"
+    # inline: permite <video>/<audio> prévia no browser
+    # o botão "Baixar" usa atributo download no front
     return FileResponse(path, media_type=media, filename=safe)
 
 

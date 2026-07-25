@@ -1139,75 +1139,123 @@
     } else {
       const r = w.result || {};
       const files = r.files || {};
+      const baseName =
+        (w.file && w.file.name && w.file.name.replace(/\.[^.]+$/, "")) ||
+        "ghostwave";
+      const hasMp4 = !!files.protected_mp4;
+      const hasWav = !!files.protected_wav;
       body = `
-        <h1 class="h1">${t("result")}</h1>
-        <div class="hint" style="border-color:rgba(74,222,128,0.35);background:rgba(74,222,128,0.08)">
-          <strong>✓ Processamento concluído</strong>
+        <h1 class="h1">Pronto</h1>
+        <div class="hint result-ok">
+          <strong>Processamento concluído</strong>
+          ${
+            hasMp4
+              ? " Seu vídeo protegido está abaixo para baixar e pré-visualizar."
+              : hasWav
+                ? " Áudio protegido pronto (este upload não gerou MP4 — use WAV ou envie um vídeo)."
+                : " Resposta sem arquivos — rode de novo ou veja o relatório técnico."
+          }
         </div>
-        ${renderSttPreview(r)}
-        ${
-          r.tts_meta
-            ? `<div class="hint" style="margin-bottom:1rem">${
-                r.tts_meta.tts
-                  ? `✓ Voz white (TTS): <strong>${escapeHtml(r.tts_meta.engine || "ok")}</strong>`
-                  : `⚠ TTS real não rodou — pode soar artificial. No servidor: <code>pip install edge-tts gTTS</code>`
-              }</div>`
-            : ""
-        }
-        <div class="compare">
-          <div class="box">
-            <h4>${t("original")} (black)</h4>
+
+        <div class="result-dl panel panel-pad">
+          <h2 class="h2" style="margin-bottom:0.75rem">Baixar arquivos</h2>
+          <div class="row-actions" style="margin-top:0">
+            ${
+              hasMp4
+                ? `<a class="btn btn-primary" href="${escapeAttr(
+                    files.protected_mp4
+                  )}" download="${escapeAttr(baseName)}_protegido.mp4">Baixar vídeo MP4</a>`
+                : `<span class="chip">MP4 não gerado</span>`
+            }
+            ${
+              hasWav
+                ? `<a class="btn" href="${escapeAttr(
+                    files.protected_wav
+                  )}" download="${escapeAttr(baseName)}_protegido.wav">Baixar áudio WAV</a>`
+                : ""
+            }
+            ${
+              files.white_preview_wav
+                ? `<a class="btn btn-ghost" href="${escapeAttr(
+                    files.white_preview_wav
+                  )}" download="${escapeAttr(baseName)}_white.wav">Baixar white (voz)</a>`
+                : ""
+            }
             ${
               files.original_wav
-                ? `<audio controls src="${files.original_wav}"></audio>`
-                : `<p class="lead" style="margin:0">Arquivo original indisponível.</p>`
+                ? `<a class="btn btn-ghost" href="${escapeAttr(
+                    files.original_wav
+                  )}" download="${escapeAttr(baseName)}_original.wav">Baixar original</a>`
+                : ""
+            }
+          </div>
+          ${
+            !hasMp4
+              ? `<p class="lead" style="margin:0.85rem 0 0;font-size:0.9rem">Se você enviou MP4 e o botão não aparece, o remux falhou no servidor (ffmpeg). Veja o relatório técnico no fim da página.</p>`
+              : ""
+          }
+        </div>
+
+        ${
+          hasMp4
+            ? `<div class="panel panel-pad result-video">
+                <h2 class="h2" style="margin-bottom:0.75rem">Prévia do vídeo</h2>
+                <video controls playsinline preload="metadata" src="${escapeAttr(
+                  files.protected_mp4
+                )}"></video>
+              </div>`
+            : ""
+        }
+
+        <div class="compare">
+          <div class="box">
+            <h4>Original (black)</h4>
+            ${
+              files.original_wav
+                ? `<audio controls src="${escapeAttr(files.original_wav)}"></audio>`
+                : `<p class="lead" style="margin:0">Indisponível</p>`
             }
           </div>
           <div class="box">
-            <h4>${t("protected")} (dual-layer)</h4>
+            <h4>Protegido (dual-layer)</h4>
             ${
               files.protected_wav
-                ? `<audio controls src="${files.protected_wav}"></audio>`
-                : `<p class="lead" style="margin:0">Áudio protegido indisponível.</p>`
+                ? `<audio controls src="${escapeAttr(files.protected_wav)}"></audio>`
+                : `<p class="lead" style="margin:0">Indisponível</p>`
             }
           </div>
           ${
             files.white_preview_wav
               ? `<div class="box">
-            <h4>White isolada (voz da copy)</h4>
-            <audio controls src="${files.white_preview_wav}"></audio>
-            <p style="margin:0.4rem 0 0;font-size:0.8rem;color:var(--muted)">Só a secondary — deve ser fala, não barulho.</p>
+            <h4>White isolada</h4>
+            <audio controls src="${escapeAttr(files.white_preview_wav)}"></audio>
+            <p class="note">Só a secondary — deve ser fala, não barulho.</p>
           </div>`
               : ""
           }
         </div>
+
         ${
-          files.protected_mp4
-            ? `<div class="panel panel-pad" style="margin-bottom:1rem"><video controls src="${files.protected_mp4}" style="width:100%;border-radius:10px;max-height:360px"></video></div>`
+          r.tts_meta
+            ? `<div class="hint" style="margin:1rem 0">${
+                r.tts_meta.tts
+                  ? `Voz white (TTS): <strong>${escapeHtml(r.tts_meta.engine || "ok")}</strong>`
+                  : `TTS real não rodou. No servidor: <code>pip install edge-tts gTTS</code>`
+              }</div>`
             : ""
         }
+
+        ${renderSttPreview(r)}
+
         <div class="row-actions">
-          ${
-            files.protected_wav
-              ? `<a class="btn btn-primary" href="${files.protected_wav}" download>${t("downloadWav")}</a>`
-              : ""
-          }
-          ${
-            files.protected_mp4
-              ? `<a class="btn" href="${files.protected_mp4}" download>${t("downloadMp4")}</a>`
-              : ""
-          }
-          ${
-            files.white_preview_wav
-              ? `<a class="btn btn-ghost" href="${files.white_preview_wav}" download>Baixar white (voz)</a>`
-              : ""
-          }
-          <button class="btn btn-ghost" id="again" type="button">${t("again")}</button>
-          <button class="btn btn-ghost" data-go="dashboard" type="button">${t("home")}</button>
+          <button class="btn btn-primary" id="again" type="button">${t("again") || "Novo arquivo"}</button>
+          <button class="btn btn-ghost" data-go="dashboard" type="button">${t("home") || "Início"}</button>
         </div>
-        <pre class="panel panel-pad" style="margin-top:1.25rem;font-family:var(--mono);font-size:0.75rem;color:var(--muted);overflow:auto">${escapeHtml(
-          JSON.stringify(r.report || {}, null, 2)
-        )}</pre>`;
+
+        <details class="result-tech">
+          <summary>Relatório técnico (JSON)</summary>
+          <pre class="panel panel-pad">${escapeHtml(JSON.stringify(r.report || {}, null, 2))}</pre>
+        </details>`;
     }
 
     app.innerHTML = `
@@ -1365,33 +1413,62 @@
     }
   }
 
+  function truncateText(s, max = 220) {
+    const t = String(s || "").replace(/\s+/g, " ").trim();
+    if (!t) return "";
+    if (t.length <= max) return t;
+    return t.slice(0, max - 1) + "…";
+  }
+
   function renderSttPreview(r) {
     const p = (r && (r.stt_preview || (r.report && r.report.stt_preview))) || null;
     if (!p) {
-      return `<p class="lead">Compare os áudios. Instale <code>openai-whisper</code> no servidor para o preview “IA leu”.</p>`;
+      return `<p class="lead">Compare os áudios acima. Whisper local opcional no servidor para o preview “IA leu”.</p>`;
     }
-    const passed = p.passed;
-    const badge = passed
-      ? `<span class="chip" style="color:var(--ok);border-color:rgba(61,214,140,0.4)">✓ Score: white venceu no Whisper</span>`
-      : `<span class="chip" style="color:var(--warn);border-color:rgba(240,180,41,0.4)">⚠ Score: black ainda forte no Whisper</span>`;
+    const goal = String(p.goal || "").toLowerCase();
+    const isAnti = goal.includes("anti") || goal.includes("ads");
+    const heard = truncateText(p.ai_heard || p.final_transcript || "", 220);
+    let badge;
+    if (isAnti) {
+      badge = p.passed
+        ? `<span class="chip ok">Anti-análise: confusão OK (proxy Whisper)</span>`
+        : `<span class="chip" style="color:var(--warn);border-color:rgba(251,191,36,0.35)">Anti-análise: confusão fraca neste teste</span>`;
+    } else {
+      badge = p.passed
+        ? `<span class="chip ok">Score: white venceu no Whisper</span>`
+        : `<span class="chip" style="color:var(--warn);border-color:rgba(251,191,36,0.35)">Score: black ainda forte no Whisper</span>`;
+    }
     const avail = p.stt_available
       ? ""
-      : `<p style="color:var(--warn);font-size:0.9rem">Whisper não está no servidor — otimizador rodou sem feedback STT real.</p>`;
+      : `<p class="lead" style="font-size:0.9rem;margin:0.5rem 0 0">Whisper não está no servidor — preview STT não rodou de verdade.</p>`;
     return `
-      <div class="dual-demo">
-        <div class="dual-box human">
-          <div class="who">HUMANO OUVE (black)</div>
-          <blockquote>Seu criativo original permanece a camada principal para o ouvido.</blockquote>
+      <div class="section">
+        <h2 class="h2">Preview STT (Whisper local)</h2>
+        <p class="lead" style="margin-bottom:0.85rem;font-size:0.9rem">
+          Isso é um <strong>proxy local</strong>, não o classificador real do TikTok/Meta.
+          Texto longo e “louco” costuma ser alucinação do Whisper em áudio dual-layer — não significa que o MP4 quebrou.
+        </p>
+        <div class="dual-demo">
+          <div class="dual-box human">
+            <div class="who">Humano (fone estéreo)</div>
+            <blockquote>Deve ouvir principalmente a black (criativo original).</blockquote>
+          </div>
+          <div class="dual-box ai">
+            <div class="who">Whisper local (trecho)</div>
+            <blockquote>${escapeHtml(heard || "(sem transcrição)")}</blockquote>
+            <p class="note">Score winner: <strong>${escapeHtml(
+              p.winner || "?"
+            )}</strong> · tentativas: ${p.attempts ?? "—"} · modo: ${escapeHtml(
+      p.goal || "?"
+    )}</p>
+          </div>
         </div>
-        <div class="dual-box ai">
-          <div class="who">IA LEU (Whisper local)</div>
-          <blockquote>${escapeHtml(p.ai_heard || "(sem transcrição)")}</blockquote>
-          <p style="margin:0.5rem 0 0;font-size:0.8rem;color:var(--muted)">Vencedor no score: <strong>${escapeHtml(p.winner || "?")}</strong> · tentativas: ${p.attempts ?? "—"}</p>
-        </div>
-      </div>
-      <div style="margin:0.75rem 0 1rem">${badge}</div>
-      ${avail}
-      <p class="lead" style="font-size:0.9rem">${escapeHtml(p.honest_note || p.note || "")}</p>`;
+        <div style="margin:0.75rem 0">${badge}</div>
+        ${avail}
+        <p class="lead" style="font-size:0.88rem;margin:0">${escapeHtml(
+          p.honest_note || p.note || ""
+        )}</p>
+      </div>`;
   }
 
   function escapeHtml(s) {
