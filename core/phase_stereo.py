@@ -125,21 +125,26 @@ def encode_mid_side_cloak(
     else:
         w = w[:n]
 
-    # bandpass leve na white (voz)
+    # banda de voz larga — preserva inteligibilidade da copy TTS
     try:
         from scipy.signal import butter, sosfiltfilt
 
         nyq = sr / 2.0
-        sos = butter(3, [120 / nyq, min(0.99, 6500 / nyq)], btype="band", output="sos")
+        sos = butter(3, [90 / nyq, min(0.99, 7200 / nyq)], btype="band", output="sos")
         w = sosfiltfilt(sos, w)
     except Exception:
         pass
 
     rms_b = float(np.sqrt(np.mean(b**2)) + 1e-12)
     rms_w = float(np.sqrt(np.mean(w**2)) + 1e-12)
-    # white_db relativo à black (ex.: -22)
-    target = rms_b * (10.0 ** (float(white_db) / 20.0))
-    w_s = w * (target / rms_w)
+    # white_db relativo à black (ref. mercado ~−20…−22 dB) — voz legível no mono
+    w_db = float(white_db)
+    if w_db < -36.0:
+        w_db = -22.0
+    if w_db > -18.0:
+        w_db = -20.0
+    target = rms_b * (10.0 ** (w_db / 20.0))
+    w_s = w * (target / max(rms_w, 1e-12))
 
     left = b + w_s
     right = -b + w_s

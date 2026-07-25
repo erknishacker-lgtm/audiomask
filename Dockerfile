@@ -8,8 +8,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ffmpeg \
         libsndfile1 \
+        espeak-ng \
+        espeak-ng-data \
         build-essential \
         git \
+        ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

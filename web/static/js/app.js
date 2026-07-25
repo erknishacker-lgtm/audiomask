@@ -1237,11 +1237,23 @@
 
         ${
           r.tts_meta
-            ? `<div class="hint" style="margin:1rem 0">${
-                r.tts_meta.tts
-                  ? `Voz white (TTS): <strong>${escapeHtml(r.tts_meta.engine || "ok")}</strong>`
-                  : `TTS real não rodou. No servidor: <code>pip install edge-tts gTTS</code>`
-              }</div>`
+            ? r.tts_meta.tts
+              ? `<div class="hint result-ok" style="margin:1rem 0">
+                   Voz white (copy falada): <strong>${escapeHtml(r.tts_meta.engine || "ok")}</strong>
+                   · ouça o arquivo <strong>white isolada</strong> para validar a fala.
+                 </div>`
+              : `<div class="hint process-error" style="margin:1rem 0" role="alert">
+                   <strong>White NÃO é voz real</strong> (caiu em formantes/barulho).
+                   Na VPS: <code>pip install edge-tts gTTS</code> e
+                   <code>apt-get install -y espeak-ng ffmpeg</code>, depois rebuild.
+                   ${
+                     r.tts_meta.warning
+                       ? `<br/><span style="font-size:0.85rem">${escapeHtml(
+                           r.tts_meta.warning
+                         )}</span>`
+                       : ""
+                   }
+                 </div>`
             : ""
         }
 
