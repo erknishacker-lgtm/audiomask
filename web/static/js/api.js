@@ -19,10 +19,24 @@ window.msApi = {
       data = await res.text();
     }
     if (!res.ok) {
-      const msg =
+      let msg =
         (data && data.detail) ||
         (typeof data === "string" ? data : null) ||
         res.statusText;
+      if (Array.isArray(msg)) {
+        msg = msg
+          .map((x) => (x && x.msg ? x.msg : typeof x === "string" ? x : JSON.stringify(x)))
+          .join("; ");
+      } else if (msg && typeof msg === "object") {
+        msg = msg.msg || msg.message || JSON.stringify(msg);
+      }
+      if (typeof msg === "string" && msg.length > 500) {
+        msg = msg.slice(0, 500) + "…";
+      }
+      if (res.status === 502 || res.status === 504) {
+        msg =
+          "Servidor não respondeu a tempo (gateway). O processamento de vídeo costuma ser pesado — use um host com API sempre ligada (não Vercel serverless).";
+      }
       throw new Error(typeof msg === "string" ? msg : JSON.stringify(msg));
     }
     return data;

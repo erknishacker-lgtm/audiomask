@@ -1424,6 +1424,28 @@ img { max-width: 100%; display: block; }
   background: var(--accent-dim);
 }
 
+.process-wait-hint {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-top: 1rem;
+  text-align: center;
+  max-width: 36rem;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.5;
+}
+
+.process-error {
+  border-color: rgba(248, 113, 113, 0.4) !important;
+  background: rgba(248, 113, 113, 0.08) !important;
+  color: var(--ink) !important;
+  margin-bottom: 1rem;
+}
+
+.process-error strong {
+  color: var(--danger);
+}
+
 /* ── Admin table ── */
 .table-wrap {
   overflow: auto;

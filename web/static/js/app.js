@@ -1104,23 +1104,31 @@
             <span class="${pct >= 100 ? "on" : ""}">Pronto</span>
           </div>
         </div>
-        <p id="runHint" style="color:var(--muted);font-size:0.85rem;margin-top:1rem;text-align:center">
-          Não feche a página. Ao chegar em 100% o resultado abre sozinho.
+        <p id="runHint" class="process-wait-hint">
+          Não feche a página. Vídeos longos ou modo anti-análise podem levar vários minutos (TTS + Whisper + encode).
         </p>`;
       } else {
+        const errBox = w.processError
+          ? `<div class="hint process-error" role="alert"><strong>Processamento falhou</strong><br/>${escapeHtml(
+              w.processError
+            )}<div class="row-actions" style="margin-top:0.85rem;margin-bottom:0">
+              <button type="button" class="btn btn-primary btn-sm" id="retryProcess">Tentar de novo</button>
+            </div></div>`
+          : "";
         body = `
         <h1 class="h1">${t("uploadTitle")}</h1>
         <p class="lead">${t("uploadSub")}</p>
+        ${errBox}
         <div class="hint"><strong>${escapeHtml(plat.name)}</strong> — black audível + white em fala (TTS) baixa. Compare o resultado antes de subir na plataforma.</div>
         <div class="drop" id="drop">
           <strong>${t("drop")}</strong>
           <span>${t("dropHint")}</span>
-          <div id="fileName" style="margin-top:0.75rem;font-family:var(--mono);font-size:0.8rem;color:var(--cyan)"></div>
+          <div id="fileName" style="margin-top:0.75rem;font-family:var(--mono);font-size:0.8rem;color:var(--muted)"></div>
           <input type="file" id="fileInput" accept="audio/*,video/*,.mp4,.mov,.wav,.mp3,.mkv,.webm" />
         </div>
         <div class="row-actions">
-          <button class="btn btn-ghost" id="backOpts">← ${t("back")}</button>
-          <button class="btn btn-primary" id="runBtn" ${w.file ? "" : "disabled"}>
+          <button class="btn btn-ghost" id="backOpts" type="button">← ${t("back")}</button>
+          <button class="btn btn-primary" id="runBtn" type="button" ${w.file ? "" : "disabled"}>
             <span id="runLabel">${w.file ? "Proteger agora" : "Selecione um arquivo"}</span>
           </button>
         </div>
@@ -1129,10 +1137,11 @@
         </p>`;
       }
     } else {
-      const r = w.result;
+      const r = w.result || {};
+      const files = r.files || {};
       body = `
         <h1 class="h1">${t("result")}</h1>
-        <div class="hint" style="border-color:rgba(61,214,140,0.4);background:rgba(61,214,140,0.08)">
+        <div class="hint" style="border-color:rgba(74,222,128,0.35);background:rgba(74,222,128,0.08)">
           <strong>✓ Processamento concluído</strong>
         </div>
         ${renderSttPreview(r)}
@@ -1148,44 +1157,56 @@
         <div class="compare">
           <div class="box">
             <h4>${t("original")} (black)</h4>
-            <audio controls src="${r.files.original_wav}"></audio>
+            ${
+              files.original_wav
+                ? `<audio controls src="${files.original_wav}"></audio>`
+                : `<p class="lead" style="margin:0">Arquivo original indisponível.</p>`
+            }
           </div>
           <div class="box">
             <h4>${t("protected")} (dual-layer)</h4>
-            <audio controls src="${r.files.protected_wav}"></audio>
+            ${
+              files.protected_wav
+                ? `<audio controls src="${files.protected_wav}"></audio>`
+                : `<p class="lead" style="margin:0">Áudio protegido indisponível.</p>`
+            }
           </div>
           ${
-            r.files.white_preview_wav
+            files.white_preview_wav
               ? `<div class="box">
             <h4>White isolada (voz da copy)</h4>
-            <audio controls src="${r.files.white_preview_wav}"></audio>
+            <audio controls src="${files.white_preview_wav}"></audio>
             <p style="margin:0.4rem 0 0;font-size:0.8rem;color:var(--muted)">Só a secondary — deve ser fala, não barulho.</p>
           </div>`
               : ""
           }
         </div>
         ${
-          r.files.protected_mp4
-            ? `<div class="panel panel-pad" style="margin-bottom:1rem"><video controls src="${r.files.protected_mp4}" style="width:100%;border-radius:10px;max-height:360px"></video></div>`
+          files.protected_mp4
+            ? `<div class="panel panel-pad" style="margin-bottom:1rem"><video controls src="${files.protected_mp4}" style="width:100%;border-radius:10px;max-height:360px"></video></div>`
             : ""
         }
         <div class="row-actions">
-          <a class="btn btn-primary" href="${r.files.protected_wav}" download>${t("downloadWav")}</a>
           ${
-            r.files.protected_mp4
-              ? `<a class="btn" href="${r.files.protected_mp4}" download>${t("downloadMp4")}</a>`
+            files.protected_wav
+              ? `<a class="btn btn-primary" href="${files.protected_wav}" download>${t("downloadWav")}</a>`
               : ""
           }
           ${
-            r.files.white_preview_wav
-              ? `<a class="btn btn-ghost" href="${r.files.white_preview_wav}" download>Baixar white (voz)</a>`
+            files.protected_mp4
+              ? `<a class="btn" href="${files.protected_mp4}" download>${t("downloadMp4")}</a>`
               : ""
           }
-          <button class="btn btn-ghost" id="again">${t("again")}</button>
-          <button class="btn btn-ghost" data-go="dashboard">${t("home")}</button>
+          ${
+            files.white_preview_wav
+              ? `<a class="btn btn-ghost" href="${files.white_preview_wav}" download>Baixar white (voz)</a>`
+              : ""
+          }
+          <button class="btn btn-ghost" id="again" type="button">${t("again")}</button>
+          <button class="btn btn-ghost" data-go="dashboard" type="button">${t("home")}</button>
         </div>
         <pre class="panel panel-pad" style="margin-top:1.25rem;font-family:var(--mono);font-size:0.75rem;color:var(--muted);overflow:auto">${escapeHtml(
-          JSON.stringify(r.report, null, 2)
+          JSON.stringify(r.report || {}, null, 2)
         )}</pre>`;
     }
 
@@ -1212,28 +1233,42 @@
         state.wizard.step = 1;
         render();
       };
-      $("#toUpload").onclick = () => {
-        state.wizard.opts = {
-          proteger: $("#opt_proteger").checked,
-          metadados: $("#opt_metadados").checked,
-          phase: $("#opt_phase").checked,
-          compress: $("#opt_compress").checked,
-          decoyDb: parseFloat($("#decoyDb").value || "-22"),
-          cloakMode: $("#cloakMode").value || "anti_analise",
-          blackText: $("#blackText").value || "",
+      const toUp = $("#toUpload");
+      if (toUp) {
+        toUp.onclick = () => {
+          try {
+            const chk = (id, fallback = true) => {
+              const el = $("#" + id);
+              return el ? !!el.checked : fallback;
+            };
+            state.wizard.opts = {
+              proteger: chk("opt_proteger", true),
+              metadados: chk("opt_metadados", true),
+              phase: chk("opt_phase", true),
+              compress: chk("opt_compress", true),
+              decoyDb: parseFloat(($("#decoyDb") && $("#decoyDb").value) || "-22"),
+              cloakMode: ($("#cloakMode") && $("#cloakMode").value) || "anti_analise",
+              blackText: ($("#blackText") && $("#blackText").value) || "",
+            };
+            state.wizard.whiteLang =
+              ($("#whiteLang") && $("#whiteLang").value) || state.wizard.whiteLang || "pt";
+            state.wizard.whiteText =
+              ($("#whiteText") && $("#whiteText").value) ||
+              defaultWhiteText(state.wizard.whiteLang);
+            state.wizard.whiteNiche = ($("#whiteNiche") && $("#whiteNiche").value) || "mmo";
+            state.wizard.whiteCopyId = ($("#whiteCopySel") && $("#whiteCopySel").value) || "mmo_1";
+            const wfEl = $("#whiteFile");
+            state.wizard.whiteFile =
+              wfEl && wfEl.files && wfEl.files[0] ? wfEl.files[0] : null;
+            state.wizard.processError = "";
+            state.wizard.step = 3;
+            render();
+          } catch (err) {
+            console.error(err);
+            toast(err.message || "Não foi possível avançar. Tente de novo.");
+          }
         };
-        state.wizard.whiteLang =
-          ($("#whiteLang") && $("#whiteLang").value) || state.wizard.whiteLang || "pt";
-        state.wizard.whiteText =
-          ($("#whiteText") && $("#whiteText").value) ||
-          defaultWhiteText(state.wizard.whiteLang);
-        state.wizard.whiteNiche = ($("#whiteNiche") && $("#whiteNiche").value) || "mmo";
-        state.wizard.whiteCopyId = ($("#whiteCopySel") && $("#whiteCopySel").value) || "mmo_1";
-        const wf = $("#whiteFile").files[0];
-        state.wizard.whiteFile = wf || null;
-        state.wizard.step = 3;
-        render();
-      };
+      }
     }
     if (w.step === 3) {
       // se já está processando, só sincroniza a barra (sem re-bind de upload)
@@ -1248,6 +1283,14 @@
         return;
       }
 
+      const retry = $("#retryProcess");
+      if (retry) {
+        retry.onclick = () => {
+          state.wizard.processError = "";
+          startProtectProcess();
+        };
+      }
+
       const drop = $("#drop");
       const input = $("#fileInput");
       const run = $("#runBtn");
@@ -1256,6 +1299,7 @@
       const hint = $("#runHint");
       const setFile = (f) => {
         state.wizard.file = f;
+        state.wizard.processError = "";
         if (nameEl) nameEl.textContent = f ? "✓ " + f.name : "";
         if (run) run.disabled = !f;
         if (label) label.textContent = f ? "Proteger agora" : "Selecione um arquivo";
@@ -1284,6 +1328,7 @@
       if (back) {
         back.onclick = () => {
           state.wizard.step = 2;
+          state.wizard.processError = "";
           render();
         };
       }
@@ -1396,29 +1441,41 @@
     }
 
     w.processing = true;
+    w.processError = "";
     w.progressPct = 0;
     w.progressStage = "Enviando arquivo…";
     render(); // entra na tela de progresso
 
     let fake = 0;
+    let waitedMs = 0;
     const stages = [
       [8, "Enviando arquivo…"],
       [22, "Gerando voz white (TTS)…"],
       [48, "Aplicando dual-layer…"],
-      [68, "Otimizando camadas…"],
+      [68, "Otimizando camadas (Whisper)…"],
       [82, "Montando vídeo…"],
-      [92, "Finalizando…"],
+      [92, "Finalizando no servidor…"],
     ];
     const tick = setInterval(() => {
+      waitedMs += 280;
       // sobe sozinho até 92%; os 100% só quando a API responder
       if (fake < 92) {
-        const step = fake < 30 ? 1.8 : fake < 60 ? 1.1 : 0.55;
+        const step = fake < 30 ? 1.8 : fake < 60 ? 1.1 : 0.45;
         fake = Math.min(92, fake + step);
         let stage = w.progressStage;
         for (const [th, label] of stages) {
           if (fake >= th) stage = label;
         }
+        // após 90s parado no teto fake, deixa claro que o servidor ainda trabalha
+        if (fake >= 90 && waitedMs > 90000) {
+          stage = "Servidor ainda processando (TTS/Whisper/ffmpeg). Aguarde…";
+        }
         setProcessProgress(fake, stage);
+      } else if (waitedMs > 90000) {
+        setProcessProgress(
+          92,
+          "Servidor ainda processando (TTS/Whisper/ffmpeg). Aguarde…"
+        );
       }
     }, 280);
 
@@ -1435,23 +1492,53 @@
         whiteFile: w.whiteFile || null,
         blackText: (w.opts && w.opts.blackText) || "",
       });
-      clearInterval(tick);
+      if (!res || res.ok === false) {
+        throw new Error(
+          (res && (res.detail || res.error || res.message)) ||
+            "Resposta inválida do servidor"
+        );
+      }
+      if (!res.files || !res.files.protected_wav) {
+        throw new Error(
+          "O servidor respondeu sem o arquivo protegido. Veja o log da API / ffmpeg."
+        );
+      }
       setProcessProgress(100, "Concluído — abrindo resultado…");
       await new Promise((r) => setTimeout(r, 450));
       w.processing = false;
       w.progressPct = 100;
+      w.processError = "";
       w.result = res;
       if (res.user) state.user = res.user;
       toast("Processamento concluído");
       w.step = 4;
       render();
     } catch (e) {
-      clearInterval(tick);
+      console.error("process error", e);
       w.processing = false;
       w.progressPct = 0;
       w.progressStage = "";
+      let msg = e && e.message ? String(e.message) : "Falha no processamento";
+      if (e && e.name === "AbortError") {
+        msg =
+          "Tempo esgotado (15 min). O vídeo é muito longo ou o servidor travou no Whisper/ffmpeg.";
+      }
+      // FastAPI às vezes devolve detail como lista
+      if (msg.startsWith("[") || msg.startsWith("{")) {
+        try {
+          const parsed = JSON.parse(msg);
+          if (Array.isArray(parsed) && parsed[0] && parsed[0].msg) {
+            msg = parsed.map((x) => x.msg).join("; ");
+          } else if (parsed && parsed.detail) {
+            msg = String(parsed.detail);
+          }
+        } catch (_) {}
+      }
+      w.processError = msg;
       render();
-      toast(e.message || "Falha no processamento");
+      toast(msg);
+    } finally {
+      clearInterval(tick);
     }
   }
 

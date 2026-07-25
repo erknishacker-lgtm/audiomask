@@ -330,7 +330,8 @@ def processar_midia(
         # 4) Compressão
         if opt.comprimir_video:
             comp = os.path.join(out_dir, f"{basename}_comp.mp4")
-            comprimir_video(out_mp4, comp, crf=20, preset="medium")
+            # veryfast: encerra bem mais rápido; CRF 20 mantém qualidade de anúncio
+            comprimir_video(out_mp4, comp, crf=20, preset="veryfast")
             os.replace(comp, out_mp4)
             report["etapas"].append({"compressao": "crf20"})
         else:
