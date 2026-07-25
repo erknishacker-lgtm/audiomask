@@ -4,9 +4,9 @@
  */
 (() => {
   const LANGS = [
-    { id: "pt", label: "Português", short: "PT-BR", flag: "🇧🇷" },
-    { id: "en", label: "English", short: "EN", flag: "🇺🇸" },
-    { id: "es", label: "Español", short: "ES", flag: "🇪🇸" },
+    { id: "pt", label: "Português", short: "PT-BR", flag: "PT" },
+    { id: "en", label: "English", short: "EN", flag: "EN" },
+    { id: "es", label: "Español", short: "ES", flag: "ES" },
   ];
 
   /** @param {{pt:string,en:string,es:string}} o */
