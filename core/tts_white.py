@@ -15,6 +15,7 @@ Ordem de engines (VPS/Docker friendly):
 from __future__ import annotations
 
 import concurrent.futures
+import hashlib
 import os
 import shutil
 import subprocess
@@ -22,6 +23,45 @@ import tempfile
 from typing import Optional, Tuple
 
 import numpy as np
+
+# Cache em disco — evita regerar TTS para o mesmo texto na mesma sessão de servidor
+_TTS_CACHE_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "tts_cache"
+)
+_MEM_CACHE: dict = {}  # key -> np.ndarray (cache em memória durante o processo)
+
+
+def _cache_key(text: str, lang: str, sr: int) -> str:
+    raw = f"{text[:300]}|{lang}|{sr}"
+    return hashlib.md5(raw.encode()).hexdigest()
+
+
+def _cache_read(key: str, sr: int) -> Optional[np.ndarray]:
+    if key in _MEM_CACHE:
+        return _MEM_CACHE[key].copy()
+    path = os.path.join(_TTS_CACHE_DIR, f"{key}.wav")
+    if not os.path.isfile(path) or os.path.getsize(path) < 200:
+        return None
+    try:
+        import soundfile as sf
+        y, file_sr = sf.read(path, always_2d=False)
+        y = np.asarray(y, dtype=np.float32).flatten()
+        if int(file_sr) != int(sr):
+            y = _resample(y, int(file_sr), sr)
+        _MEM_CACHE[key] = y
+        return y.copy()
+    except Exception:
+        return None
+
+
+def _cache_write(key: str, y: np.ndarray, sr: int) -> None:
+    _MEM_CACHE[key] = y.copy()
+    try:
+        os.makedirs(_TTS_CACHE_DIR, exist_ok=True)
+        import soundfile as sf
+        sf.write(os.path.join(_TTS_CACHE_DIR, f"{key}.wav"), y, sr, subtype="PCM_16")
+    except Exception:
+        pass
 
 
 def _detect_lang(text: str, hint: str = "") -> str:
@@ -189,7 +229,7 @@ def _tts_edge(text: str, sr: int, lang: str) -> Tuple[Optional[np.ndarray], str]
         return _normalize(y), f"edge-tts:{voice}"
 
     try:
-        return _run_in_thread(_worker, timeout=180.0)
+        return _run_in_thread(_worker, timeout=25.0)
     except Exception as e:
         return None, f"edge-tts falhou: {e}"
     finally:
@@ -371,6 +411,8 @@ def gerar_fala_white(
     """
     Gera áudio de fala da copy white (preferencialmente TTS real).
 
+    Usa cache em memória + disco para não regar o mesmo texto.
+
     Returns:
         (audio mono float32, meta)
     """
@@ -380,11 +422,25 @@ def gerar_fala_white(
             "Oferta especial. Confira as condicoes oficiais no site. "
             "Produto com garantia e suporte ao cliente."
         )
-    # edge-tts / gTTS limitam textos muito longos
     if len(text) > 900:
         text = text[:900].rsplit(" ", 1)[0] + "."
 
     lang = _detect_lang(text, language)
+    key = _cache_key(text, lang, sr)
+
+    # Tenta cache antes de qualquer TTS
+    cached = _cache_read(key, sr)
+    if cached is not None and len(cached) > int(sr * 0.25):
+        y = _fit_duration(cached, sr, duracao_s)
+        return y, {
+            "tts": True,
+            "engine": "cache",
+            "language": lang,
+            "chars": len(text),
+            "duration_s": round(len(y) / float(sr), 3),
+            "is_speech": True,
+        }
+
     errors = []
 
     # Ordem: rede neural → gTTS → offline espeak → macOS → formant
@@ -395,15 +451,15 @@ def gerar_fala_white(
             errors.append(f"{fn.__name__}: {e}")
             continue
         if y is not None and len(y) > int(sr * 0.25):
-            y = _fit_duration(y, sr, duracao_s)
             try:
                 from core.cloaker import bandpass
-
-                # banda de voz ampla — mantém inteligibilidade da copy
                 y = bandpass(y.astype(np.float64), sr, 80.0, 7500.0).astype(np.float32)
                 y = _normalize(y)
             except Exception:
                 y = _normalize(y)
+            # Salva no cache para próximas chamadas (sem fit_duration — guarda base)
+            _cache_write(key, y, sr)
+            y = _fit_duration(y, sr, duracao_s)
             return y, {
                 "tts": True,
                 "engine": detail,
@@ -423,8 +479,29 @@ def gerar_fala_white(
         "errors": errors,
         "is_speech": False,
         "warning": (
-            "Nenhum TTS real disponível — soa como barulho. "
-            "Na VPS instale: pip install edge-tts gTTS && apt-get install -y espeak-ng ffmpeg"
+            "Nenhum TTS real disponivel. "
+            "Na VPS: pip install edge-tts gTTS && apt-get install -y espeak-ng"
         ),
         "duration_s": round(len(y) / float(sr), 3),
     }
+
+
+def prewarm(sr: int = 48000) -> dict:
+    """
+    Pré-aquece o cache TTS com o texto white padrão (PT/EN/ES).
+    Chamar uma vez no startup da API para garantir que o primeiro
+    request de usuário não trave esperando edge-tts.
+    """
+    results = {}
+    defaults = {
+        "pt": "Oferta especial por tempo limitado. Confira as condicoes no site.",
+        "en": "Limited time offer. Check terms and conditions on the website.",
+        "es": "Oferta especial por tiempo limitado. Consulta las condiciones en el sitio.",
+    }
+    for lang, text in defaults.items():
+        try:
+            _, meta = gerar_fala_white(text, sr, duracao_s=10.0, language=lang)
+            results[lang] = meta.get("engine", "?")
+        except Exception as e:
+            results[lang] = f"erro: {e}"
+    return results

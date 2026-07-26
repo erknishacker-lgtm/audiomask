@@ -43,7 +43,26 @@ WEB_DIR = os.path.join(ROOT, "web")
 OUTPUT_DIR = os.path.join(ROOT, "output")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-app = FastAPI(title="GhostWave", version="3.0.0")
+
+def _prewarm_tts() -> None:
+    try:
+        from core.tts_white import prewarm
+        results = prewarm(sr=48000)
+        print(f"[startup] TTS prewarm: {results}", flush=True)
+    except Exception as e:
+        print(f"[startup] TTS prewarm falhou (não crítico): {e}", flush=True)
+
+
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app_):
+    import threading
+    threading.Thread(target=_prewarm_tts, daemon=True).start()
+    yield
+
+
+app = FastAPI(title="GhostWave", version="3.0.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
