@@ -1,5 +1,5 @@
 """
-Encriptamento phase-stereo “invisível”.
+Encriptamento phase-stereo "invisível".
 
 Codifica informação auxiliar em diferença L/R (side) com nível baixo.
 - Em mono (muitos players/ASR downmix): side se cancela parcialmente.
@@ -98,23 +98,52 @@ def _mono(a: np.ndarray) -> np.ndarray:
 
 def encode_mid_side_cloak(
     black: np.ndarray,
-    white: np.ndarray,
+    white: Optional[np.ndarray] = None,
     sr: int = 48000,
     white_db: float = -22.0,
 ) -> Tuple[np.ndarray, dict]:
     """
-    Codificação do mercado (arquivo *_shielded.mp4 analisado):
+    Codificação de inversão de fase (análise de mercado *_shielded.mp4):
 
+    Modo puro (white=None, padrão):
+      L = black
+      R = -black
+      ⇒ mono (L+R)/2 ≈ 0  — silêncio: TikTok não detecta nada → APROVADO
+      ⇒ side (L-R)/2 = black — fone estéreo ouve o conteúdo completo
+
+    Modo com white (white_db controla o nível da white no mid):
       L = black + white_scaled
       R = -black + white_scaled
-
-    ⇒ mid (L+R)/2 = white   ← mono (TikTok / alto-falante do celular)
-    ⇒ side (L-R)/2 = black ← diferença L/R (fone estéreo)
-
-    white_db: nível da white vs black (ref. ≈ −20…−22 dB).
-    A white NÃO deve “gritar” no estéreo; no mono ela é a única voz.
+      ⇒ mid = white_scaled, side = black
     """
     b = _mono(black).astype(np.float64)
+
+    # Modo puro: inversão de fase sem white no mono (igual à referência analisada)
+    if white is None:
+        peak_b = float(np.max(np.abs(b)) + 1e-12)
+        if peak_b > 0.99:
+            b = b * (0.99 / peak_b)
+        left = b
+        right = -b
+        stereo = np.stack([left, right], axis=0).astype(np.float32)
+        mid = (left + right) / 2.0
+        side = (left - right) / 2.0
+        rms_mid = float(np.sqrt(np.mean(mid**2)) + 1e-12)
+        rms_side = float(np.sqrt(np.mean(side**2)) + 1e-12)
+        return stereo, {
+            "phase_stereo": True,
+            "engine": "pure_anti_phase_cloak",
+            "white_db": None,
+            "mid_vs_side_db": float(20.0 * np.log10(rms_mid / rms_side + 1e-20)),
+            "corr_L_vs_minus_R": float(np.corrcoef(left, -right)[0, 1]) if len(left) > 8 else 0.0,
+            "shape": list(stereo.shape),
+            "channels": 2,
+            "human_stereo": "black_on_side",
+            "mono_downmix": "silence",
+            "quality_ok": True,
+            "nota": "Inversão pura L=-R: mono ≈ silêncio. TikTok não detecta conteúdo → aprovado.",
+        }
+
     w = _mono(white).astype(np.float64)
     n = max(len(b), len(w))
     if len(b) < n:
