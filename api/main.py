@@ -62,7 +62,7 @@ async def lifespan(app_):
     yield
 
 
-app = FastAPI(title="GhostWave", version="3.0.0", lifespan=lifespan)
+app = FastAPI(title="zGhost Wave", version="3.0.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
