@@ -283,69 +283,124 @@
     };
   }
 
-  function nav(extra = "") {
-    const u = state.user;
-    const left = u.daily_left ?? u.videos_left;
-    const lim = u.daily_limit ?? u.video_limit;
-    return `
-      <nav class="nav">
-        <div class="brand" data-go="dashboard" title="GhostWave">
-          <img class="brand-logo" src="/assets/logo.png" alt="GhostWave" width="44" height="44" />
-          <div class="brand-text">GhostWave</div>
-        </div>
-        <div class="nav-right">
-          ${langSelect()}
-          <button class="btn btn-ghost btn-sm" data-go="tutorials">Tutoriais</button>
-          <button class="btn btn-ghost btn-sm" data-go="pricing">Planos</button>
-          <span class="chip accent">${(u.plan_name || u.plan || "free").toString()}</span>
-          <span class="chip">${left}/${lim} hoje</span>
-          ${u.role === "admin" ? `<span class="chip admin">Admin</span>` : ""}
-          <button class="btn btn-ghost btn-sm" id="btnLogout">${t("logout")}</button>
-        </div>
-      </nav>
-      ${extra}`;
+  /* kept for legacy template strings that still call nav() */
+  function nav() { return ""; }
+
+  function _navIcon(name) {
+    const icons = {
+      dashboard: `<svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg>`,
+      protect:   `<svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 2L3 5v5c0 4.4 3 7.9 7 9 4-1.1 7-4.6 7-9V5l-7-3z"/></svg>`,
+      tutorials: `<svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4h12v12H4z" rx="1"/><path d="M4 8h12M8 4v12"/></svg>`,
+      pricing:   `<svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="5" width="16" height="11" rx="2"/><path d="M6 5V4a2 2 0 0 1 8 0v1"/><path d="M10 10v2M8 11h4"/></svg>`,
+      account:   `<svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="7" r="3"/><path d="M4 17c0-3 2.7-5 6-5s6 2 6 5"/></svg>`,
+      admin:     `<svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="2"/><path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.2 4.2l1.4 1.4M14.4 14.4l1.4 1.4M4.2 15.8l1.4-1.4M14.4 5.6l1.4-1.4"/></svg>`,
+    };
+    return icons[name] || "";
   }
 
-  function bindNav() {
+  function renderShell() {
+    if ($("#sidebar")) {
+      updateSidebarActive();
+      return;
+    }
+    const u = state.user;
+    const left = u.daily_left ?? u.videos_left ?? 0;
+    const lim  = u.daily_limit ?? u.video_limit ?? 1;
+    const pct  = Math.round(Math.min(100, (left / Math.max(lim, 1)) * 100));
+    const planLabel = escapeHtml((u.plan_name || u.plan || "free").toString());
+    const initials = escapeHtml((u.name || u.email || "U")[0].toUpperCase());
+    const adminItem = u.role === "admin"
+      ? `<button class="sidebar-nav-item" data-go="admin">${_navIcon("admin")} Admin</button>` : "";
+
+    app.innerHTML = `
+      <div class="layout">
+        <aside class="sidebar" id="sidebar">
+          <div class="sidebar-brand" data-go="dashboard">
+            <img class="sidebar-brand-logo" src="/assets/logo.png" alt="Ghost Wave" />
+            <span class="sidebar-brand-name">Ghost Wave</span>
+          </div>
+          <nav class="sidebar-nav">
+            <button class="sidebar-nav-item" data-go="dashboard">${_navIcon("dashboard")} Dashboard</button>
+            <button class="sidebar-nav-item" data-go="protect">${_navIcon("protect")} Processar</button>
+            <button class="sidebar-nav-item" data-go="tutorials">${_navIcon("tutorials")} Tutoriais</button>
+            <button class="sidebar-nav-item" data-go="pricing">${_navIcon("pricing")} Planos</button>
+            <button class="sidebar-nav-item" data-go="account">${_navIcon("account")} Conta</button>
+            ${adminItem}
+          </nav>
+          <div class="sidebar-footer">
+            <div class="sidebar-plan-badge">
+              <span class="sidebar-plan-name">${planLabel}</span>
+              <span class="sidebar-plan-quota">${left}/${lim}</span>
+            </div>
+            <div class="sidebar-plan-bar">
+              <div class="sidebar-plan-bar-fill" style="width:${pct}%"></div>
+            </div>
+            <div class="sidebar-user">
+              <div class="sidebar-avatar">${initials}</div>
+              <div class="sidebar-user-info">
+                <div class="sidebar-user-name">${escapeHtml(u.name || "")}</div>
+                <div class="sidebar-user-email">${escapeHtml(u.email || "")}</div>
+              </div>
+              <button class="sidebar-logout" id="btnLogout" title="${t("logout")}">
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M13 7l3 3-3 3M16 10H8M8 3H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h3"/></svg>
+              </button>
+            </div>
+          </div>
+        </aside>
+        <div class="content-area">
+          <div id="content"></div>
+        </div>
+      </div>`;
+
+    updateSidebarActive();
     bindLang();
     $$("[data-go]").forEach((el) => {
       el.onclick = () => {
-        state.view = el.getAttribute("data-go");
-        if (state.view === "protect") {
+        const target = el.getAttribute("data-go");
+        if (target === "protect") {
           state.wizard = {
-            step: 1,
-            platform: null,
-            file: null,
-            whiteFile: null,
-            whiteText: "",
-            whiteNiche: "mmo",
-            whiteCopyId: "mmo_1",
-            whiteLang: "pt",
-            result: null,
-            opts: {
-              proteger: true,
-              metadados: true,
-              phase: true,
-              compress: true,
-              decoyDb: -22,
-              cloakMode: "anti_analise",
-            },
+            step: 1, platform: null, file: null, whiteFile: null,
+            whiteText: "", whiteNiche: "mmo", whiteCopyId: "mmo_1",
+            whiteLang: "pt", result: null,
+            opts: { proteger: true, metadados: true, phase: true, compress: true, decoyDb: -22, cloakMode: "anti_analise" },
           };
         }
+        state.view = target;
         render();
       };
     });
     const lo = $("#btnLogout");
     if (lo) {
       lo.onclick = async () => {
-        try {
-          await msApi.logout();
-        } catch (_) {}
+        try { await msApi.logout(); } catch (_) {}
         state.user = null;
         state.view = "auth";
+        app.innerHTML = "";
         render();
       };
     }
+  }
+
+  function updateSidebarActive() {
+    $$(".sidebar-nav-item[data-go]").forEach((el) => {
+      el.classList.toggle("active", el.getAttribute("data-go") === state.view);
+    });
+  }
+
+  function getContent() {
+    return $("#content") || app;
+  }
+
+  function bindNav() {
+    /* legacy: sidebar already handles nav */
+    bindLang();
+    $$("[data-go]").forEach((el) => {
+      if (el.closest("#sidebar")) return; // sidebar handles its own
+      el.onclick = () => {
+        state.view = el.getAttribute("data-go");
+        render();
+      };
+    });
   }
 
   function $$(sel) {
@@ -616,9 +671,8 @@
     const lim = u.daily_limit ?? u.video_limit;
     const usedToday = u.daily_used ?? 0;
     const planLabel = escapeHtml(u.plan_name || u.plan || "free");
-    app.innerHTML = `
+    getContent().innerHTML = `
       <div class="shell fade-in">
-        ${nav()}
         <header class="page-head">
           <h1 class="h1">${t("welcome")}, ${escapeHtml(u.name)}</h1>
           <p class="lead">Seu público ouve o criativo original. A IA de legenda e moderação tende a ler a copy white.</p>
@@ -697,9 +751,8 @@
 
   function viewAccount() {
     const u = state.user;
-    app.innerHTML = `
+    getContent().innerHTML = `
       <div class="shell fade-in">
-        ${nav()}
         <div class="page-head">
           <div class="back-row"><button class="btn btn-ghost btn-sm" data-go="dashboard" type="button">← ${t("back")}</button></div>
           <h1 class="h1">${t("account")}</h1>
@@ -740,9 +793,8 @@
   }
 
   function viewPricing() {
-    app.innerHTML = `
+    getContent().innerHTML = `
       <div class="shell fade-in">
-        ${nav()}
         <div class="page-head">
           <div class="back-row"><button class="btn btn-ghost btn-sm" data-go="dashboard" type="button">← ${t("back")}</button></div>
           <h1 class="h1">Planos</h1>
@@ -809,9 +861,8 @@
   }
 
   function viewTutorials() {
-    app.innerHTML = `
+    getContent().innerHTML = `
       <div class="shell fade-in">
-        ${nav()}
         <div class="page-head">
           <div class="back-row"><button class="btn btn-ghost btn-sm" data-go="dashboard" type="button">← ${t("back")}</button></div>
           <h1 class="h1">Como funciona</h1>
@@ -864,9 +915,8 @@
   }
 
   async function viewAdmin() {
-    app.innerHTML = `
+    getContent().innerHTML = `
       <div class="shell fade-in">
-        ${nav()}
         <button class="btn btn-ghost btn-sm" data-go="dashboard">← ${t("back")}</button>
         <h1 class="h1" style="margin-top:1rem">${t("admin")}</h1>
         <div class="stats" id="adminStats"></div>
@@ -1293,9 +1343,8 @@
         </details>`;
     }
 
-    app.innerHTML = `
+    getContent().innerHTML = `
       <div class="shell fade-in">
-        ${nav()}
         ${steps}
         ${body}
       </div>`;
@@ -1658,7 +1707,7 @@
       } catch (re) {
         console.error(re);
         toast(msg);
-        app.innerHTML = `<div class="shell"><div class="hint process-error"><strong>Erro</strong><br/>${escapeHtml(
+        getContent().innerHTML = `<div class="shell"><div class="hint process-error"><strong>Erro</strong><br/>${escapeHtml(
           msg
         )}</div><button class="btn" data-go="dashboard">Início</button></div>`;
         bindNav();
@@ -1694,7 +1743,7 @@
         )}" download>Baixar white</a>`
       );
     }
-    app.innerHTML = `
+    getContent().innerHTML = `
       <div class="shell fade-in">
         <h1 class="h1">Pronto</h1>
         <div class="hint result-ok"><strong>Processamento concluído</strong> (tela simplificada)</div>
@@ -1737,6 +1786,10 @@
       state.view = "auth";
       return viewAuth();
     }
+
+    // Mounts sidebar once; subsequent calls only update #content
+    renderShell();
+
     if (state.view === "dashboard") return viewDashboard();
     if (state.view === "account") return viewAccount();
     if (state.view === "admin") return viewAdmin();
