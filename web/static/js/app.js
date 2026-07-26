@@ -288,12 +288,12 @@
 
   function _navIcon(name) {
     const icons = {
-      dashboard: `<svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg>`,
-      protect:   `<svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 2L3 5v5c0 4.4 3 7.9 7 9 4-1.1 7-4.6 7-9V5l-7-3z"/></svg>`,
-      tutorials: `<svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4h12v12H4z" rx="1"/><path d="M4 8h12M8 4v12"/></svg>`,
-      pricing:   `<svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="5" width="16" height="11" rx="2"/><path d="M6 5V4a2 2 0 0 1 8 0v1"/><path d="M10 10v2M8 11h4"/></svg>`,
-      account:   `<svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="7" r="3"/><path d="M4 17c0-3 2.7-5 6-5s6 2 6 5"/></svg>`,
-      admin:     `<svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="2"/><path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.2 4.2l1.4 1.4M14.4 14.4l1.4 1.4M4.2 15.8l1.4-1.4M14.4 5.6l1.4-1.4"/></svg>`,
+      dashboard: `<svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="currentColor"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg>`,
+      protect:   `<svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2L3 5v5c0 4.4 3 7.9 7 9 4-1.1 7-4.6 7-9V5l-7-3z"/></svg>`,
+      tutorials: `<svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4zm5 0v12h7V4H8zM4 4v12h3V4H4z" clip-rule="evenodd"/></svg>`,
+      pricing:   `<svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M4 4a2 2 0 0 0-2 2v1h16V6a2 2 0 0 0-2-2H4z"/><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zm-5 3a1 1 0 1 0 0 2h2a1 1 0 1 0 0-2h-2z" clip-rule="evenodd"/></svg>`,
+      account:   `<svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm-7 9a7 7 0 1 1 14 0H3z" clip-rule="evenodd"/></svg>`,
+      admin:     `<svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 0 1-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 0 1 .947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 0 1 2.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 0 1 2.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 0 1 .947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 0 1-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 0 1-2.287-.947zM10 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" clip-rule="evenodd"/></svg>`,
     };
     return icons[name] || "";
   }
@@ -317,7 +317,7 @@
         <aside class="sidebar" id="sidebar">
           <div class="sidebar-brand" data-go="dashboard">
             <img class="sidebar-brand-logo" src="/assets/logo.png" alt="Ghost Wave" />
-            <span class="sidebar-brand-name">Ghost Wave</span>
+            <span class="sidebar-brand-name">zGhost Wave</span>
           </div>
           <nav class="sidebar-nav">
             <button class="sidebar-nav-item" data-go="dashboard">${_navIcon("dashboard")} Dashboard</button>
