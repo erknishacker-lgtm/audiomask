@@ -961,250 +961,82 @@ a.btn:hover {
 
 /* ── Auth ── */
 .auth-wrap {
-  position: relative;
   min-height: 100dvh;
-  display: grid;
-  place-items: center;
+  background: #0c0d10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 2rem 1.25rem;
-  overflow: hidden;
-  isolation: isolate;
 }
 
 .auth-card {
-  width: min(400px, 100%);
-  border: 1px solid var(--border);
-  background: rgba(20, 20, 22, 0.92);
-  border-radius: 4px;
-  padding: 1.85rem 1.5rem 1.45rem;
-  position: relative;
-  z-index: 2;
-  overflow: hidden;
-  backdrop-filter: blur(14px) saturate(1.15);
-  -webkit-backdrop-filter: blur(14px) saturate(1.15);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 24px 64px rgba(0, 0, 0, 0.45);
+  width: min(420px, 100%);
+  background: #111318;
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 2.25rem 2rem 2rem;
 }
 
-.auth-card::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
-  opacity: 0.7;
-}
-
-.auth-logo {
-  display: block;
-  width: 96px;
-  height: 96px;
-  margin: 0 auto 0.75rem;
-  object-fit: contain;
-  border: none !important;
-  border-radius: 4px;
-  box-shadow: none !important;
-  padding: 0;
-}
-
-.auth-card h1 {
-  text-align: center;
-  font-size: 1.4rem;
-  letter-spacing: -0.025em;
-  margin: 0 0 0.35rem;
-  font-weight: 650;
-}
-
-.auth-card .sub {
-  text-align: center;
-  color: var(--muted);
-  font-size: 0.9rem;
-  margin: 0 0 1.25rem;
-  line-height: 1.5;
-  max-width: 32ch;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.auth-lang {
-  text-align: center;
-  margin-bottom: 1rem;
-}
-
-.tabs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.3rem;
-  background: var(--bg);
-  padding: 0.28rem;
-  border-radius: 0;
-  margin-bottom: 1.15rem;
-  border: 1px solid var(--border);
-}
-
-.tab {
-  border: 0;
-  background: transparent;
-  color: var(--muted);
-  border-radius: 0;
-  padding: 0.55rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s var(--ease), color 0.15s var(--ease);
-}
-
-.tab:hover { color: var(--ink); }
-
-.tab.active {
-  background: var(--surface-2);
-  color: var(--ink);
-  box-shadow: inset 0 0 0 1px var(--border);
-}
-
-.auth-foot {
-  margin-top: 1.1rem;
-  text-align: center;
-  font-size: 0.75rem;
-  color: var(--faint);
-  line-height: 1.45;
-  font-family: var(--mono);
-}
-
-/* Auth decor (restrained) */
-.auth-decor {
-  pointer-events: none;
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  overflow: hidden;
-}
-
-.auth-decor .ad-item {
-  position: absolute;
-  opacity: 0.35;
-  will-change: transform;
-  color: rgba(255, 255, 255, 0.75);
-}
-
-.auth-decor .ad-item svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-}
-
-.auth-decor .ad-ghost {
-  width: 36px;
-  height: 42px;
-  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.08));
-}
-
-.auth-decor .ad-mute {
-  width: 32px;
-  height: 32px;
-  opacity: 0.28;
-  animation: adFloat 7s ease-in-out infinite;
-}
-
-.auth-decor .ad-wave {
-  width: 48px;
-  height: 24px;
-  opacity: 0.22;
-  animation: adPulse 3.2s ease-in-out infinite;
-}
-
-.auth-decor .ad-lock {
-  width: 24px;
-  height: 24px;
-  opacity: 0.2;
-  animation: adDrift 10s linear infinite;
-}
-
-.auth-decor .ad-eq {
+.auth-brand {
   display: flex;
-  align-items: flex-end;
-  gap: 3px;
-  height: 20px;
-  opacity: 0.28;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 2rem;
 }
 
-.auth-decor .ad-eq span {
-  display: block;
-  width: 3px;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.55);
-  animation: adEq 1.2s ease-in-out infinite;
-  transform-origin: bottom;
+.auth-brand img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  mix-blend-mode: screen;
 }
 
-.auth-decor .ad-eq span:nth-child(1) { height: 8px; animation-delay: 0s; }
-.auth-decor .ad-eq span:nth-child(2) { height: 16px; animation-delay: 0.15s; }
-.auth-decor .ad-eq span:nth-child(3) { height: 12px; animation-delay: 0.3s; }
-.auth-decor .ad-eq span:nth-child(4) { height: 20px; animation-delay: 0.08s; }
-.auth-decor .ad-eq span:nth-child(5) { height: 10px; animation-delay: 0.22s; }
-
-.auth-decor .ad-eq.blocked span {
-  animation: adEqBlocked 1.6s ease-in-out infinite;
-  background: rgba(255, 255, 255, 0.3);
+.auth-brand span {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.01em;
 }
 
-.auth-decor .ad-slash {
-  position: absolute;
-  inset: -4px;
-  border: 1.5px solid rgba(248, 113, 113, 0.45);
-  border-radius: 4px;
-  transform: rotate(-18deg);
-  animation: adSlashPulse 2.4s ease-in-out infinite;
+.auth-heading {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.025em;
+  margin: 0 0 0.4rem;
 }
 
-.auth-decor .ad-slash::after {
-  content: "";
-  position: absolute;
-  left: 10%;
-  right: 10%;
-  top: 50%;
-  height: 2px;
-  background: rgba(248, 113, 113, 0.65);
-  transform: rotate(-18deg);
+.auth-sub {
+  font-size: 0.875rem;
+  color: var(--muted);
+  margin: 0 0 1.75rem;
+  line-height: 1.5;
 }
 
-.auth-decor .ad-spark {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.45);
-  animation: adSpark 4.5s ease-in-out infinite;
+.auth-form .btn-primary.auth-submit {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  height: 2.6rem;
 }
 
-@keyframes adFloat {
-  0%, 100% { transform: translateY(0) rotate(-3deg); }
-  50% { transform: translateY(-14px) rotate(3deg); }
+.auth-switch {
+  margin-top: 1.25rem;
+  font-size: 0.825rem;
+  color: var(--muted);
+  text-align: center;
 }
-@keyframes adPulse {
-  0%, 100% { opacity: 0.12; transform: scale(0.96); }
-  50% { opacity: 0.32; transform: scale(1.04); }
+
+.auth-link {
+  background: none;
+  border: none;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: inherit;
+  font-weight: 500;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
-@keyframes adDrift {
-  0% { transform: translateY(0) rotate(0deg); opacity: 0.1; }
-  40% { opacity: 0.28; }
-  100% { transform: translateY(-32px) rotate(10deg); opacity: 0.08; }
-}
-@keyframes adEq {
-  0%, 100% { transform: scaleY(0.45); }
-  50% { transform: scaleY(1); }
-}
-@keyframes adEqBlocked {
-  0%, 100% { transform: scaleY(0.2); opacity: 0.3; }
-  50% { transform: scaleY(0.5); opacity: 0.5; }
-}
-@keyframes adSlashPulse {
-  0%, 100% { opacity: 0.45; }
-  50% { opacity: 0.85; }
-}
-@keyframes adSpark {
-  0%, 100% { opacity: 0.12; transform: scale(0.6); }
-  50% { opacity: 0.7; transform: scale(1.15); }
-}
+
 
 /* ── White copy chips ── */
 .white-copy-chips {
