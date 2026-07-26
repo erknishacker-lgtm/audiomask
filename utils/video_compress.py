@@ -41,6 +41,10 @@ def comprimir_video(
         "aac",
         "-b:a",
         audio_bitrate,
+        "-ac",
+        "2",  # NUNCA colapsar para mono — destrói mid-side TikTok
+        "-channel_layout",
+        "stereo",
         "-movflags",
         "+faststart",
         caminho_out,

@@ -21,6 +21,7 @@ from core.dual_layer_optimizer import OptimizeConfig, optimize_dual_layer
 from core.phase_stereo import (
     PhaseStereoParams,
     encode_mid_side_cloak,
+    mono_downmix_from_stereo,
     mono_para_stereo_protegido,
 )
 from utils.audio_io import salvar_audio
@@ -261,35 +262,47 @@ def processar_midia(
 
     # 3) Phase-stereo / mid-side invert (igual arquivo pago *_shielded.mp4)
     audio_out_path = os.path.join(out_dir, f"{basename}.wav")
+    mono_tiktok_path = None
     stereo = None
     # TRUQUE DO MERCADO (TikTok mono):
     #   L = black + white,  R = -black + white
-    #   mono (L+R)/2 ≈ white  → robô ouve a copy white
-    #   estéreo side ≈ black  → humano ouve o anúncio
+    #   mono (L+R)/2 = white  → robô / mono ouve a copy limpa
+    #   side (L-R)/2 = black → fone estéreo ouve o anúncio
+    # anti_analise SEMPRE usa mid-side se houver white (não misturar mono)
     use_ms_invert = (
-        opt.phase_stereo
-        and white_src is not None
-        and mode in ("anti_analise", "auto", "redirect", "natural")
+        white_src is not None
         and mode != "white_only"
+        and (
+            opt.phase_stereo
+            or mode in ("anti_analise", "auto", "redirect")
+        )
     )
     if use_ms_invert:
-        # black limpa = original do criativo (y), não o mono misturado
-        black_src = y
+        black_src = y  # criativo original limpo
         w_db = float(getattr(opt, "anti_decoy_db", -22.0) or -22.0)
         if mode == "natural":
             w_db = float(opt.decoy_db or -40.0)
+        elif mode == "anti_analise":
+            # mercado: secondary ~−20…−22 dB
+            w_db = float(np.clip(w_db, -28.0, -18.0))
         stereo, meta_ps = encode_mid_side_cloak(
             black_src, white_src, sr=sr, white_db=w_db
         )
-        try:
-            import soundfile as sf
-
-            # soundfile: (N, ch)
-            sf.write(audio_out_path, stereo.T, sr, subtype="PCM_16")
-        except Exception:
-            salvar_audio(audio_out_path, y_work, sr)
+        # NUNCA salvar com force_mono — mataria o truque L/R
+        salvar_audio(audio_out_path, stereo, sr, force_mono=False)
+        # Preview: o que o TikTok ouve (mono = só white)
+        mono_tiktok = mono_downmix_from_stereo(stereo)
+        mono_tiktok_path = os.path.join(out_dir, f"{basename}_tiktok_mono.wav")
+        salvar_audio(mono_tiktok_path, mono_tiktok, sr, force_mono=True)
         report["etapas"].append({"phase_stereo": meta_ps})
-        # VÍDEO leva o ESTÉREO invertido (não mono com black!)
+        if not meta_ps.get("quality_ok", True):
+            report["etapas"].append(
+                {
+                    "phase_stereo_warn": (
+                        "Cancelamento mid-side fraco — verifique white TTS e canais."
+                    )
+                }
+            )
         audio_for_mux = stereo
     elif opt.phase_stereo and white_src is not None:
         side_db = -30.0 if mode == "anti_analise" else -34.0
@@ -297,24 +310,22 @@ def processar_midia(
             y_work,
             payload=white_src,
             sr=sr,
-            params=PhaseStereoParams(side_db=side_db, invert_side=False),
+            params=PhaseStereoParams(side_db=side_db, invert_side=True),
         )
-        try:
-            import soundfile as sf
-
-            sf.write(audio_out_path, stereo.T, sr, subtype="PCM_16")
-        except Exception:
-            salvar_audio(audio_out_path, y_work, sr)
+        salvar_audio(audio_out_path, stereo, sr, force_mono=False)
+        mono_tiktok = mono_downmix_from_stereo(stereo)
+        mono_tiktok_path = os.path.join(out_dir, f"{basename}_tiktok_mono.wav")
+        salvar_audio(mono_tiktok_path, mono_tiktok, sr, force_mono=True)
         report["etapas"].append({"phase_stereo": meta_ps})
         audio_for_mux = stereo
     else:
-        salvar_audio(audio_out_path, y_work, sr)
+        salvar_audio(audio_out_path, y_work, sr, force_mono=True)
         report["etapas"].append({"phase_stereo": False})
         audio_for_mux = y_work
 
     # Salva também original para compare
     orig_path = os.path.join(out_dir, f"{basename}_orig.wav")
-    salvar_audio(orig_path, y, sr)
+    salvar_audio(orig_path, y, sr, force_mono=True)
 
     out_mp4 = None
     if caminho_video and os.path.isfile(caminho_video):
@@ -406,6 +417,7 @@ def processar_midia(
         "audio_protected": audio_out_path,
         "audio_original": orig_path,
         "audio_white_preview": white_preview_path,
+        "audio_tiktok_mono": mono_tiktok_path,
         "video": out_mp4,
         "report": report,
         "stt_preview": stt_preview,

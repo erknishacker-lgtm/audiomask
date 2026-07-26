@@ -105,13 +105,14 @@ def encode_mid_side_cloak(
     """
     Codificação do mercado (arquivo *_shielded.mp4 analisado):
 
-      L ≈ black + white_scaled
-      R ≈ -black + white_scaled
+      L = black + white_scaled
+      R = -black + white_scaled
 
-    ⇒ mid (L+R)/2 ≈ white   ← o que o TikTok costuma ouvir no mono
-    ⇒ side (L-R)/2 ≈ black  ← o que o humano ouve no estéreo
+    ⇒ mid (L+R)/2 = white   ← mono (TikTok / alto-falante do celular)
+    ⇒ side (L-R)/2 = black ← diferença L/R (fone estéreo)
 
-    white_db: nível da secondary vs black (ref. pago ≈ −20…−22 dB).
+    white_db: nível da white vs black (ref. ≈ −20…−22 dB).
+    A white NÃO deve “gritar” no estéreo; no mono ela é a única voz.
     """
     b = _mono(black).astype(np.float64)
     w = _mono(white).astype(np.float64)
@@ -121,11 +122,22 @@ def encode_mid_side_cloak(
     else:
         b = b[:n]
     if len(w) < n:
-        w = np.pad(w, (0, n - len(w)))
+        # repete a fala white (com gap) para cobrir o anúncio inteiro
+        if len(w) > sr // 4:
+            gap = np.zeros(int(0.15 * sr), dtype=np.float64)
+            parts = [w]
+            cur = len(w)
+            while cur < n:
+                parts.append(gap)
+                parts.append(w)
+                cur += len(gap) + len(w)
+            w = np.concatenate(parts)[:n]
+        else:
+            w = np.pad(w, (0, n - len(w)))
     else:
         w = w[:n]
 
-    # banda de voz larga — preserva inteligibilidade da copy TTS
+    # banda de voz — copy TTS inteligível no mono
     try:
         from scipy.signal import butter, sosfiltfilt
 
@@ -135,9 +147,13 @@ def encode_mid_side_cloak(
     except Exception:
         pass
 
+    # normaliza black para headroom (evita clip que desbalanceia L/R)
+    peak_b = float(np.max(np.abs(b)) + 1e-12)
+    if peak_b > 0.92:
+        b = b * (0.92 / peak_b)
+
     rms_b = float(np.sqrt(np.mean(b**2)) + 1e-12)
     rms_w = float(np.sqrt(np.mean(w**2)) + 1e-12)
-    # white_db relativo à black (ref. mercado ~−20…−22 dB) — voz legível no mono
     w_db = float(white_db)
     if w_db < -36.0:
         w_db = -22.0
@@ -146,35 +162,71 @@ def encode_mid_side_cloak(
     target = rms_b * (10.0 ** (w_db / 20.0))
     w_s = w * (target / max(rms_w, 1e-12))
 
+    # Truque exato: black em oposição de fase; white em fase
     left = b + w_s
     right = -b + w_s
 
     peak = max(float(np.max(np.abs(left))), float(np.max(np.abs(right))), 1e-12)
     if peak > 0.99:
-        left *= 0.99 / peak
-        right *= 0.99 / peak
-        w_s *= 0.99 / peak
-        b_out = b * (0.99 / peak)
-    else:
-        b_out = b
+        scale = 0.99 / peak
+        left *= scale
+        right *= scale
+        w_s *= scale
+        b *= scale
 
     stereo = np.stack([left, right], axis=0).astype(np.float32)
-    mid = (left + right) / 2.0
-    side = (left - right) / 2.0
+    mid = (left + right) / 2.0  # == white_scaled
+    side = (left - right) / 2.0  # == black
     rms_mid = float(np.sqrt(np.mean(mid**2)) + 1e-12)
     rms_side = float(np.sqrt(np.mean(side**2)) + 1e-12)
+
+    # qualidade do cancelamento (quanto de black vaza no mono)
+    def _corr(a: np.ndarray, c: np.ndarray) -> float:
+        a = np.asarray(a, dtype=np.float64).flatten()
+        c = np.asarray(c, dtype=np.float64).flatten()
+        nn = min(len(a), len(c))
+        a, c = a[:nn], c[:nn]
+        a = a - a.mean()
+        c = c - c.mean()
+        den = float(np.linalg.norm(a) * np.linalg.norm(c) + 1e-12)
+        return float(np.dot(a, c) / den)
+
+    corr_mid_white = _corr(mid, w_s)
+    corr_mid_black = _corr(mid, b)
+    corr_side_black = _corr(side, b)
     meta = {
         "phase_stereo": True,
         "engine": "mid_side_invert_cloak",
-        "white_db": float(white_db),
+        "white_db": float(w_db),
         "mid_vs_side_db": float(20.0 * np.log10(rms_mid / rms_side + 1e-20)),
         "corr_L_vs_minus_R": float(np.corrcoef(left, -right)[0, 1]) if n > 8 else 0.0,
+        "corr_mono_vs_white": corr_mid_white,
+        "corr_mono_vs_black": corr_mid_black,
+        "corr_side_vs_black": corr_side_black,
         "shape": list(stereo.shape),
-        "human_stereo": "black_on_side",
-        "mono_downmix": "white_on_mid",
+        "channels": 2,
+        "human_stereo": "black_on_side_white_quiet_center",
+        "mono_downmix": "white_only",
+        "quality_ok": bool(
+            corr_mid_white > 0.9
+            and abs(corr_mid_black) < 0.15
+            and corr_side_black > 0.9
+        ),
         "nota": (
-            "Estéreo invertido estilo mercado: mono/TikTok tende a ouvir a white; "
-            "fone estéreo ouve a black."
+            "Estéreo mid-side: fone estéreo → anúncio (black). "
+            "Mono/TikTok → copy white limpa. White é fala TTS, não ruído."
         ),
     }
     return stereo, meta
+
+
+def mono_downmix_from_stereo(stereo: np.ndarray) -> np.ndarray:
+    """(L+R)/2 — o que o TikTok costuma ouvir."""
+    x = np.asarray(stereo, dtype=np.float32)
+    if x.ndim == 1:
+        return x
+    if x.shape[0] == 2 and x.shape[0] < x.shape[1]:
+        return (0.5 * (x[0] + x[1])).astype(np.float32)
+    if x.shape[1] == 2:
+        return (0.5 * (x[:, 0] + x[:, 1])).astype(np.float32)
+    return _mono(x).astype(np.float32)

@@ -65,25 +65,50 @@ def carregar_audio(
         raise RuntimeError(f"Falha ao carregar áudio: {exc}") from exc
 
 
+def _para_sf_write(audio: np.ndarray) -> np.ndarray:
+    """
+    Prepara array para soundfile.
+    - mono (N,) permanece mono
+    - estéreo (2, N) ou (N, 2) → (N, 2)  **sem** forçar mono
+      (crítico para mid-side L/R do cloaker TikTok)
+    """
+    x = np.asarray(audio, dtype=np.float32)
+    if x.ndim == 1:
+        y = x
+    elif x.ndim == 2:
+        if x.shape[0] <= 8 and x.shape[0] < x.shape[1]:
+            # (ch, N) → (N, ch)
+            y = x.T
+        else:
+            y = x
+    else:
+        y = _para_mono_float32(x)
+    return np.clip(y, -1.0, 1.0)
+
+
 def salvar_audio(
     caminho: str,
     audio: np.ndarray,
     sr: int,
     formato: Optional[str] = None,
     bitrate_mp3: str = "192k",
+    force_mono: bool = False,
 ) -> str:
     """
     Salva áudio em WAV ou MP3.
 
     Args:
         caminho: destino (extensão define formato se `formato` for None).
-        audio: sinal mono/multi.
+        audio: sinal mono ou multi-canal (estéreo mid-side deve ser preservado).
         sr: taxa de amostragem.
         formato: 'wav' | 'mp3' | None (auto).
         bitrate_mp3: ex. '128k', '192k', '320k'.
+        force_mono: se True, colapsa para mono (legado). Padrão False.
     """
-    y = _para_mono_float32(audio)
-    y = np.clip(y, -1.0, 1.0)
+    if force_mono:
+        y = np.clip(_para_mono_float32(audio), -1.0, 1.0)
+    else:
+        y = _para_sf_write(audio)
 
     ext = (formato or os.path.splitext(caminho)[1].lstrip(".")).lower()
     os.makedirs(os.path.dirname(os.path.abspath(caminho)) or ".", exist_ok=True)
@@ -97,6 +122,7 @@ def salvar_audio(
         return caminho
 
     if ext == "mp3":
+        # MP3 via pydub: se estéreo, grava WAV temp estéreo
         return _salvar_mp3(caminho, y, sr, bitrate_mp3)
 
     # Fallback: WAV

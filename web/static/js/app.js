@@ -1171,7 +1171,14 @@
               hasWav
                 ? `<a class="btn" href="${escapeAttr(
                     files.protected_wav
-                  )}" download="${escapeAttr(baseName)}_protegido.wav">Baixar áudio WAV</a>`
+                  )}" download="${escapeAttr(baseName)}_protegido_stereo.wav">Baixar WAV estéreo</a>`
+                : ""
+            }
+            ${
+              files.tiktok_mono_wav
+                ? `<a class="btn btn-ghost" href="${escapeAttr(
+                    files.tiktok_mono_wav
+                  )}" download="${escapeAttr(baseName)}_tiktok_mono.wav">Baixar mono TikTok</a>`
                 : ""
             }
             ${
@@ -1207,6 +1214,12 @@
             : ""
         }
 
+        <div class="hint" style="margin:1rem 0 0.75rem">
+          <strong>Como ouvir (importante)</strong><br/>
+          Use <strong>fone estéreo</strong> no áudio/vídeo protegido: você deve ouvir o anúncio (black).
+          O arquivo <strong>TikTok mono</strong> é o que a plataforma tende a ouvir: copy white limpa.
+          Alto-falante do celular = mono = soa como white (é o truque, não um bug).
+        </div>
         <div class="compare">
           <div class="box">
             <h4>Original (black)</h4>
@@ -1217,19 +1230,29 @@
             }
           </div>
           <div class="box">
-            <h4>Protegido (dual-layer)</h4>
+            <h4>Protegido estéreo (humano)</h4>
             ${
               files.protected_wav
                 ? `<audio controls src="${escapeAttr(files.protected_wav)}"></audio>`
                 : `<p class="lead" style="margin:0">Indisponível</p>`
             }
+            <p class="note">Fone estéreo: anúncio principal. Não use só o alto-falante do celular.</p>
           </div>
+          ${
+            files.tiktok_mono_wav
+              ? `<div class="box">
+            <h4>TikTok mono (plataforma)</h4>
+            <audio controls src="${escapeAttr(files.tiktok_mono_wav)}"></audio>
+            <p class="note">Downmix (L+R)/2 — deve ser a copy white falada, limpa.</p>
+          </div>`
+              : ""
+          }
           ${
             files.white_preview_wav
               ? `<div class="box">
-            <h4>White isolada</h4>
+            <h4>White isolada (TTS)</h4>
             <audio controls src="${escapeAttr(files.white_preview_wav)}"></audio>
-            <p class="note">Só a secondary — deve ser fala, não barulho.</p>
+            <p class="note">Só a voz da copy — tem que ser fala, não chiado.</p>
           </div>`
               : ""
           }

@@ -367,23 +367,26 @@ async def process_media(
         orig_wav = result["audio_original"]
         out_mp4 = result.get("video")
         white_prev = result.get("audio_white_preview")
+        tiktok_mono = result.get("audio_tiktok_mono")
         tts_meta = result.get("tts_meta") or result.get("report", {}).get("tts_meta")
+
+        def _file_url(path: Optional[str]) -> Optional[str]:
+            if not path:
+                return None
+            return f"/api/files/{os.path.basename(path)}"
 
         return {
             "ok": True,
             "files": {
-                "protected_wav": f"/api/files/{os.path.basename(out_wav)}",
-                "original_wav": f"/api/files/{os.path.basename(orig_wav)}",
-                "white_preview_wav": (
-                    f"/api/files/{os.path.basename(white_prev)}" if white_prev else None
-                ),
-                "protected_mp4": (
-                    f"/api/files/{os.path.basename(out_mp4)}" if out_mp4 else None
-                ),
+                "protected_wav": _file_url(out_wav),
+                "original_wav": _file_url(orig_wav),
+                "white_preview_wav": _file_url(white_prev),
+                "tiktok_mono_wav": _file_url(tiktok_mono),
+                "protected_mp4": _file_url(out_mp4),
             },
             "report": {
                 "platform": platform,
-                "pipeline": "v6_tts_speech_white",
+                "pipeline": "v7_mid_side_tts_white",
                 "cloak_mode": mode,
                 "etapas": result.get("report", {}).get("etapas"),
                 "opcoes": result.get("report", {}).get("opcoes"),
@@ -391,9 +394,9 @@ async def process_media(
                 "stt_preview": result.get("stt_preview")
                 or result.get("report", {}).get("stt_preview"),
                 "nota": (
-                    "White é gerada com TTS (voz da copy), não barulho. "
-                    "anti_analise: black + fala white baixa (~−22 dB). "
-                    "Ouça white_preview_wav para validar a voz isolada."
+                    "Mid-side: fone estéreo = anúncio (black). "
+                    "Mono/TikTok = copy white limpa (TTS). "
+                    "Ouça protected_wav com fone e tiktok_mono_wav para comparar."
                 ),
             },
             "stt_preview": result.get("stt_preview")
