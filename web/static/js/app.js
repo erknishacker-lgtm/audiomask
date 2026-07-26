@@ -667,70 +667,49 @@
 
   function viewDashboard() {
     const u = state.user;
-    const left = u.daily_left ?? u.videos_left;
-    const lim = u.daily_limit ?? u.video_limit;
-    const usedToday = u.daily_used ?? 0;
-    const planLabel = escapeHtml(u.plan_name || u.plan || "free");
+    const adminCard = u.role === "admin"
+      ? `<button class="dash-card" data-go="admin" type="button">
+          <svg class="dash-card-icon" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M12.516 2.17a.75.75 0 0 0-1.032 0 11.209 11.209 0 0 1-7.877 3.08.75.75 0 0 0-.722.515A12.74 12.74 0 0 0 2.25 9.75c0 5.942 4.064 10.933 9.563 12.348a.749.749 0 0 0 .374 0c5.499-1.415 9.563-6.406 9.563-12.348 0-1.39-.223-2.73-.635-3.985a.75.75 0 0 0-.722-.516l-.143.001c-2.996 0-5.717-1.17-7.734-3.08zm3.094 8.016a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25z" clip-rule="evenodd"/></svg>
+          <div class="dash-card-title">Administração</div>
+          <div class="dash-card-desc">Usuários, planos, cotas e logs do sistema.</div>
+          <span class="dash-card-btn">Acessar</span>
+        </button>` : "";
+
     getContent().innerHTML = `
       <div class="shell fade-in">
-        <header class="page-head">
-          <h1 class="h1">${t("welcome")}, ${escapeHtml(u.name)}</h1>
-          <p class="lead">Seu público ouve o criativo original. A IA de legenda e moderação tende a ler a copy white.</p>
-        </header>
+        <h1 class="dash-title">Dashboard</h1>
 
-        <div class="stats" role="group" aria-label="Uso de hoje">
-          <div class="stat"><div class="lbl">${t("plan")}</div><div class="val" style="font-size:1rem">${planLabel}</div></div>
-          <div class="stat"><div class="lbl">Usados hoje</div><div class="val">${usedToday}/${lim}</div></div>
-          <div class="stat"><div class="lbl">Restam</div><div class="val">${left}</div></div>
-        </div>
-
-        <div class="actions">
-          <button class="action featured" data-go="protect" type="button">
-            <span class="arrow" aria-hidden="true">→</span>
-            <div class="cta-media">
-              <img src="/assets/cta-protect.jpg" alt="" width="640" height="360" />
-            </div>
-            <div class="cta-body">
-              <span class="cta-pill">Fluxo principal</span>
-              <h3>Proteger criativo</h3>
-              <p>Plataforma, funções dual-layer, upload e download em um fluxo único.</p>
-            </div>
+        <p class="dash-section-label">Produtos</p>
+        <div class="dash-card-grid">
+          <button class="dash-card" data-go="protect" type="button">
+            <svg class="dash-card-icon" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M12.516 2.17a.75.75 0 0 0-1.032 0 11.209 11.209 0 0 1-7.877 3.08.75.75 0 0 0-.722.515A12.74 12.74 0 0 0 2.25 9.75c0 5.942 4.064 10.933 9.563 12.348a.749.749 0 0 0 .374 0c5.499-1.415 9.563-6.406 9.563-12.348 0-1.39-.223-2.73-.635-3.985a.75.75 0 0 0-.722-.516l-.143.001c-2.996 0-5.717-1.17-7.734-3.08z" clip-rule="evenodd"/></svg>
+            <div class="dash-card-title">Proteger criativo</div>
+            <div class="dash-card-desc">Dual-layer de áudio: humano ouve o original, a IA tende a ler a copy white.</div>
+            <span class="dash-card-btn">Acessar</span>
           </button>
-          <div class="actions-side">
-            <button class="action" data-go="tutorials" type="button">
-              <span class="arrow" aria-hidden="true">→</span>
-              <h3>Tutoriais</h3>
-              <p>Dual-layer explicado sem jargão, com analogias simples.</p>
-            </button>
-            <button class="action" data-go="account" type="button">
-              <span class="arrow" aria-hidden="true">→</span>
-              <h3>${t("account")}</h3>
-              <p>Plano, créditos diários e histórico de uso.</p>
-            </button>
-            ${
-              u.role === "admin"
-                ? `<button class="action" data-go="admin" type="button">
-                    <span class="arrow" aria-hidden="true">→</span>
-                    <h3>${t("admin")}</h3>
-                    <p>Usuários, planos e cotas diárias.</p>
-                  </button>`
-                : `<button class="action" data-go="pricing" type="button">
-                    <span class="arrow" aria-hidden="true">→</span>
-                    <h3>Planos</h3>
-                    <p>Mensal, trimestral e anual ilimitado.</p>
-                  </button>`
-            }
-          </div>
         </div>
 
-        <div class="section">
-          <h2 class="h2">O que entra em cada processamento</h2>
-          <div class="layers">
-            <div class="layer"><strong>Dual-layer black e white</strong><span>Humano ouve black; white fica baixa para STT e moderação.</span></div>
-            <div class="layer"><strong>Limpar metadados</strong><span>Remove rastros digitais do arquivo de mídia.</span></div>
-            <div class="layer"><strong>Phase-stereo</strong><span>Proteção L/R discreta no downmix mono.</span></div>
-            <div class="layer"><strong>Compressão inteligente</strong><span>Vídeo menor sem perda visual perceptível.</span></div>
-          </div>
+        <p class="dash-section-label">Links úteis</p>
+        <div class="dash-card-grid">
+          <button class="dash-card" data-go="tutorials" type="button">
+            <svg class="dash-card-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M11.25 4.533A9.707 9.707 0 0 0 6 3a9.735 9.735 0 0 0-3.25.555.75.75 0 0 0-.5.707v14.25a.75.75 0 0 0 1 .707A8.237 8.237 0 0 1 6 18.75c1.995 0 3.823.707 5.25 1.886V4.533zM12.75 20.636A8.214 8.214 0 0 1 18 18.75c.966 0 1.89.166 2.75.47a.75.75 0 0 0 1-.707V4.262a.75.75 0 0 0-.5-.707A9.735 9.735 0 0 0 18 3a9.707 9.707 0 0 0-5.25 1.533v16.103z"/></svg>
+            <div class="dash-card-title">Tutoriais</div>
+            <div class="dash-card-desc">Entenda o dual-layer sem jargão, com exemplos práticos.</div>
+            <span class="dash-card-btn">Acessar</span>
+          </button>
+          <button class="dash-card" data-go="account" type="button">
+            <svg class="dash-card-icon" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0zM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695z" clip-rule="evenodd"/></svg>
+            <div class="dash-card-title">Minha conta</div>
+            <div class="dash-card-desc">Veja seu plano, créditos diários e histórico de uso.</div>
+            <span class="dash-card-btn">Acessar</span>
+          </button>
+          <button class="dash-card" data-go="pricing" type="button">
+            <svg class="dash-card-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M2.25 2.25a.75.75 0 0 0 0 1.5h1.386c.17 0 .318.114.362.278l2.558 9.592a3.752 3.752 0 0 0-2.806 3.63c0 .414.336.75.75.75h15.75a.75.75 0 0 0 0-1.5H5.378A2.25 2.25 0 0 1 7.5 15h11.218a.75.75 0 0 0 .674-.421 60.358 60.358 0 0 0 2.96-7.228.75.75 0 0 0-.525-.965A60.864 60.864 0 0 0 5.68 4.509l-.232-.867A1.875 1.875 0 0 0 3.636 2.25H2.25zM3.75 20.25a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0zM16.5 20.25a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0z"/></svg>
+            <div class="dash-card-title">Planos</div>
+            <div class="dash-card-desc">Mensal, trimestral e anual com créditos ilimitados.</div>
+            <span class="dash-card-btn">Acessar</span>
+          </button>
+          ${adminCard}
         </div>
       </div>`;
     bindNav();

@@ -1,36 +1,35 @@
 /* ==========================================================================
-   zGhost Wave — product UI (sale-ready)
-   Off-black lab · white accent · Instrument Sans + JetBrains Mono
-   Logo sempre em fundo escuro (personagem some em fundo claro)
+   zGhost Wave — product UI
+   Inter + JetBrains Mono · Cloakup-style dark SaaS
    ========================================================================== */
 
 :root {
-  --bg: #0a0a0b;
-  --bg-elev: #111113;
-  --surface: #141416;
-  --surface-2: #1c1c1f;
-  --surface-3: #232328;
+  --bg: #0c0d10;
+  --bg-elev: #111318;
+  --surface: #161820;
+  --surface-2: #1c1e28;
+  --surface-3: #23263a;
   --border: rgba(255, 255, 255, 0.08);
   --border-strong: rgba(255, 255, 255, 0.14);
-  --ink: #f4f4f5;
-  --muted: #a1a1aa;
-  --faint: #71717a;
-  --accent: #fafafa;
+  --ink: #f1f2f4;
+  --muted: #9ca3af;
+  --faint: #6b7280;
+  --accent: #ffffff;
   --accent-dim: rgba(255, 255, 255, 0.08);
   --accent-glow: rgba(255, 255, 255, 0.1);
-  --cyan: #fafafa;
-  --cyan-2: #e4e4e7;
+  --cyan: #ffffff;
+  --cyan-2: #e5e7eb;
   --cyan-dim: rgba(255, 255, 255, 0.08);
   --cyan-glow: rgba(255, 255, 255, 0.1);
   --danger: #f87171;
   --ok: #4ade80;
   --warn: #fbbf24;
-  --radius: 12px;
-  --radius-sm: 8px;
-  --radius-lg: 16px;
-  --font: "Instrument Sans", system-ui, -apple-system, sans-serif;
+  --radius: 10px;
+  --radius-sm: 7px;
+  --radius-lg: 14px;
+  --font: "Inter", system-ui, -apple-system, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, monospace;
-  --shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
   --max: 1080px;
   --nav-h: 64px;
@@ -1723,8 +1722,8 @@ select.chip {
 .sidebar {
   width: var(--sidebar-w);
   flex-shrink: 0;
-  background: #111113;
-  border-right: 1px solid rgba(255,255,255,0.07);
+  background: #0d0f14;
+  border-right: 1px solid rgba(255,255,255,0.06);
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -1739,25 +1738,25 @@ select.chip {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 18px 16px 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.07);
+  padding: 20px 16px 18px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
   flex-shrink: 0;
   text-decoration: none;
   cursor: pointer;
 }
 
 .sidebar-brand-logo {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   flex-shrink: 0;
-  mix-blend-mode: screen; /* removes black BG on dark surface */
-  filter: brightness(1.15);
+  mix-blend-mode: screen;
+  filter: brightness(1.2);
   object-fit: contain;
 }
 
 .sidebar-brand-name {
-  font-size: 1rem;
-  font-weight: 700;
+  font-size: 0.975rem;
+  font-weight: 600;
   color: var(--ink);
   letter-spacing: -0.01em;
   white-space: nowrap;
@@ -1766,7 +1765,7 @@ select.chip {
 /* ── Nav items ── */
 .sidebar-nav {
   flex: 1;
-  padding: 8px 0;
+  padding: 10px 0;
   overflow-y: auto;
   overflow-x: hidden;
 }
@@ -1784,37 +1783,38 @@ select.chip {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 12px;
-  margin: 1px 8px;
-  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 2px 8px;
+  border-radius: 7px;
   cursor: pointer;
-  color: var(--muted);
-  font-size: 0.875rem;
-  font-weight: 450;
-  transition: background 0.13s, color 0.13s;
+  color: #9ca3af;
+  font-size: 0.855rem;
+  font-weight: 400;
+  transition: background 0.12s, color 0.12s;
   border: none;
   background: none;
   width: calc(100% - 16px);
   text-align: left;
   font-family: var(--font);
+  letter-spacing: -0.01em;
 }
 
 .sidebar-nav-item:hover {
-  background: rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.055);
   color: var(--ink);
 }
 
 .sidebar-nav-item.active {
-  background: rgba(255,255,255,0.1);
-  color: var(--ink);
+  background: rgba(255,255,255,0.09);
+  color: #fff;
   font-weight: 500;
 }
 
 .sidebar-nav-icon {
-  width: 18px;
-  height: 18px;
+  width: 17px;
+  height: 17px;
   flex-shrink: 0;
-  opacity: 0.7;
+  opacity: 0.6;
 }
 
 .sidebar-nav-item.active .sidebar-nav-icon,
@@ -1824,7 +1824,7 @@ select.chip {
 
 /* ── Sidebar footer ── */
 .sidebar-footer {
-  border-top: 1px solid rgba(255,255,255,0.07);
+  border-top: 1px solid rgba(255,255,255,0.06);
   padding: 12px;
   flex-shrink: 0;
 }
@@ -1833,10 +1833,8 @@ select.chip {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 10px;
-  background: rgba(255,255,255,0.05);
-  border-radius: 8px;
-  margin-bottom: 8px;
+  padding: 6px 8px;
+  margin-bottom: 6px;
 }
 
 .sidebar-plan-name {
@@ -1847,21 +1845,21 @@ select.chip {
 }
 
 .sidebar-plan-quota {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--muted);
 }
 
 .sidebar-plan-bar {
   height: 3px;
-  background: rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.08);
   border-radius: 2px;
-  margin: 6px 0 8px;
+  margin: 0 8px 10px;
   overflow: hidden;
 }
 
 .sidebar-plan-bar-fill {
   height: 100%;
-  background: var(--ink);
+  background: #4f8ef7;
   border-radius: 2px;
   transition: width 0.3s;
 }
@@ -1870,10 +1868,10 @@ select.chip {
   display: flex;
   align-items: center;
   gap: 9px;
-  padding: 6px 4px;
+  padding: 7px 8px;
   cursor: pointer;
-  border-radius: 8px;
-  transition: background 0.13s;
+  border-radius: 7px;
+  transition: background 0.12s;
 }
 
 .sidebar-user:hover {
@@ -1884,11 +1882,11 @@ select.chip {
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: rgba(255,255,255,0.12);
+  background: #1e2535;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 600;
   color: var(--ink);
   flex-shrink: 0;
@@ -1901,7 +1899,7 @@ select.chip {
 }
 
 .sidebar-user-name {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 500;
   color: var(--ink);
   white-space: nowrap;
@@ -1910,7 +1908,7 @@ select.chip {
 }
 
 .sidebar-user-email {
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
@@ -1922,9 +1920,8 @@ select.chip {
   border: none;
   color: var(--faint);
   cursor: pointer;
-  font-size: 0.75rem;
-  padding: 2px;
-  transition: color 0.13s;
+  padding: 3px;
+  transition: color 0.12s;
   flex-shrink: 0;
 }
 
@@ -1937,23 +1934,111 @@ select.chip {
   margin-left: var(--sidebar-w);
   flex: 1;
   min-height: 100vh;
+  background: #0c0d10;
   display: flex;
   flex-direction: column;
 }
 
-/* Shell inside content area loses max-width centering offset */
 .content-area .shell {
-  max-width: 880px;
-  padding: 32px 40px;
+  max-width: 960px;
+  padding: 36px 40px 60px;
 }
 
 .content-area .page-head {
   padding-top: 0;
 }
 
-/* Remove top nav spacing inside content area */
 .content-area .nav {
   display: none;
+}
+
+/* ── Dashboard card grid (Cloakup-style) ── */
+.dash-section-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.01em;
+  margin: 0 0 14px;
+}
+
+.dash-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
+  margin-bottom: 36px;
+}
+
+.dash-card {
+  background: #111318;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+  padding: 22px 22px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  text-align: left;
+}
+
+.dash-card:hover {
+  border-color: rgba(255,255,255,0.14);
+  background: #161820;
+}
+
+.dash-card-icon {
+  width: 36px;
+  height: 36px;
+  color: #fff;
+  margin-bottom: 14px;
+  opacity: 0.9;
+}
+
+.dash-card-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0 0 6px;
+  letter-spacing: -0.01em;
+}
+
+.dash-card-desc {
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.55;
+  margin: 0 0 18px;
+  flex: 1;
+}
+
+.dash-card-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+  font-family: var(--font);
+  align-self: flex-start;
+}
+
+.dash-card-btn:hover {
+  background: rgba(255,255,255,0.07);
+  border-color: rgba(255,255,255,0.3);
+}
+
+/* Dashboard page title */
+.dash-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.03em;
+  margin: 0 0 28px;
+  line-height: 1.2;
 }
 
 /* ── Mobile: sidebar collapses ── */
