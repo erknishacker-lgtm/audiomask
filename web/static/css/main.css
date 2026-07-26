@@ -24,9 +24,9 @@
   --danger: #f87171;
   --ok: #4ade80;
   --warn: #fbbf24;
-  --radius: 10px;
-  --radius-sm: 7px;
-  --radius-lg: 14px;
+  --radius: 6px;
+  --radius-sm: 4px;
+  --radius-lg: 8px;
   --font: "Inter", system-ui, -apple-system, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, monospace;
   --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
@@ -145,7 +145,7 @@ img { max-width: 100%; display: block; }
 }
 
 .brand:focus-visible {
-  border-radius: 8px;
+  border-radius: 4px;
   box-shadow: var(--focus);
 }
 
@@ -156,7 +156,7 @@ img { max-width: 100%; display: block; }
   object-fit: contain;
   background: transparent !important;
   border: none !important;
-  border-radius: 0 !important;
+  border-radius: 4px;
   box-shadow: none !important;
   display: block;
 }
@@ -189,7 +189,7 @@ img { max-width: 100%; display: block; }
   font-family: var(--mono);
   font-size: 0.68rem;
   padding: 0.3rem 0.65rem;
-  border-radius: 999px;
+  border-radius: 0;
   border: 1px solid var(--border);
   color: var(--muted);
   background: var(--surface);
@@ -269,7 +269,7 @@ img { max-width: 100%; display: block; }
   border: 1px solid var(--border-strong);
   background: var(--surface-2);
   color: var(--ink);
-  border-radius: 999px;
+  border-radius: 0;
   padding: 0.65rem 1.1rem;
   font-weight: 600;
   font-size: 0.9rem;
@@ -368,7 +368,7 @@ a.btn:hover {
 .result-video video {
   width: 100%;
   max-height: 420px;
-  border-radius: 10px;
+  border-radius: 4px;
   background: #000;
   display: block;
 }
@@ -433,7 +433,7 @@ a.btn:hover {
   width: 100%;
   background: var(--bg-elev);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 4px;
   padding: 0.72rem 0.9rem;
   outline: none;
   transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
@@ -502,7 +502,7 @@ a.btn:hover {
 .panel {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 4px;
 }
 
 .panel-pad { padding: 1.25rem 1.35rem; }
@@ -523,7 +523,7 @@ a.btn:hover {
 
 .dual-box {
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 4px;
   padding: 1.15rem 1.2rem;
   background: var(--bg-elev);
   min-height: 140px;
@@ -572,7 +572,7 @@ a.btn:hover {
   gap: 0;
   margin: 0 0 1.75rem;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 4px;
   background: var(--surface);
   overflow: hidden;
 }
@@ -633,7 +633,7 @@ a.btn:hover {
 .action {
   border: 1px solid var(--border);
   background: var(--surface);
-  border-radius: var(--radius);
+  border-radius: 4px;
   padding: 1.2rem 1.2rem;
   cursor: pointer;
   text-align: left;
@@ -714,7 +714,7 @@ a.btn:hover {
   text-transform: uppercase;
   color: #0a0a0b;
   background: #fafafa;
-  border-radius: 999px;
+  border-radius: 0;
   padding: 0.28rem 0.6rem;
   margin-bottom: 0.6rem;
   font-weight: 650;
@@ -789,7 +789,7 @@ a.btn:hover {
 .layer {
   border: 1px solid var(--border);
   background: var(--bg-elev);
-  border-radius: var(--radius-sm);
+  border-radius: 4px;
   padding: 1rem 1.05rem;
 }
 
@@ -825,7 +825,7 @@ a.btn:hover {
 .price-card {
   border: 1px solid var(--border);
   background: var(--surface);
-  border-radius: var(--radius);
+  border-radius: 4px;
   padding: 1.35rem 1.2rem 1.25rem;
   position: relative;
   display: flex;
@@ -931,7 +931,7 @@ a.btn:hover {
 .tutorial-card {
   border: 1px solid var(--border);
   background: var(--surface);
-  border-radius: var(--radius);
+  border-radius: 4px;
   padding: 1.2rem 1.25rem;
 }
 
@@ -974,7 +974,7 @@ a.btn:hover {
   width: min(400px, 100%);
   border: 1px solid var(--border);
   background: rgba(20, 20, 22, 0.92);
-  border-radius: var(--radius-lg);
+  border-radius: 4px;
   padding: 1.85rem 1.5rem 1.45rem;
   position: relative;
   z-index: 2;
@@ -1002,7 +1002,7 @@ a.btn:hover {
   margin: 0 auto 0.75rem;
   object-fit: contain;
   border: none !important;
-  border-radius: 0 !important;
+  border-radius: 4px;
   box-shadow: none !important;
   padding: 0;
 }
@@ -1037,7 +1037,7 @@ a.btn:hover {
   gap: 0.3rem;
   background: var(--bg);
   padding: 0.28rem;
-  border-radius: 999px;
+  border-radius: 0;
   margin-bottom: 1.15rem;
   border: 1px solid var(--border);
 }
@@ -1046,7 +1046,7 @@ a.btn:hover {
   border: 0;
   background: transparent;
   color: var(--muted);
-  border-radius: 999px;
+  border-radius: 0;
   padding: 0.55rem;
   font-weight: 600;
   cursor: pointer;
@@ -1152,7 +1152,7 @@ a.btn:hover {
   position: absolute;
   inset: -4px;
   border: 1.5px solid rgba(248, 113, 113, 0.45);
-  border-radius: 8px;
+  border-radius: 4px;
   transform: rotate(-18deg);
   animation: adSlashPulse 2.4s ease-in-out infinite;
 }
@@ -1218,7 +1218,7 @@ a.btn:hover {
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--muted);
-  border-radius: 999px;
+  border-radius: 0;
   padding: 0.35rem 0.75rem;
   font-size: 0.8rem;
   font-weight: 600;
@@ -1250,7 +1250,7 @@ a.btn:hover {
   align-items: flex-start;
   gap: 0.12rem;
   padding: 0.7rem 0.8rem;
-  border-radius: var(--radius-sm);
+  border-radius: 4px;
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--muted);
@@ -1304,7 +1304,7 @@ a.btn:hover {
 .plat {
   border: 1px solid var(--border);
   background: var(--bg-elev);
-  border-radius: var(--radius-sm);
+  border-radius: 4px;
   padding: 0.9rem 0.85rem;
   cursor: pointer;
   text-align: left;
@@ -1350,7 +1350,7 @@ a.btn:hover {
   font-family: var(--mono);
   font-size: 0.7rem;
   padding: 0.35rem 0.7rem;
-  border-radius: 999px;
+  border-radius: 0;
   border: 1px solid var(--border);
   color: var(--faint);
 }
@@ -1371,7 +1371,7 @@ a.btn:hover {
 .drop {
   border: 1px dashed rgba(255, 255, 255, 0.2);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent);
-  border-radius: var(--radius);
+  border-radius: 4px;
   padding: 2.4rem 1.25rem;
   text-align: center;
   transition: border-color 0.15s, background 0.15s;
@@ -1410,7 +1410,7 @@ a.btn:hover {
 .compare .box {
   border: 1px solid var(--border);
   background: var(--bg-elev);
-  border-radius: var(--radius-sm);
+  border-radius: 4px;
   padding: 0.9rem;
 }
 
@@ -1441,7 +1441,7 @@ a.btn:hover {
 
 .process-bar {
   height: 8px;
-  border-radius: 999px;
+  border-radius: 0;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid var(--border);
   overflow: hidden;
@@ -1451,7 +1451,7 @@ a.btn:hover {
 .process-bar-fill {
   height: 100%;
   width: 0%;
-  border-radius: 999px;
+  border-radius: 0;
   background: #fafafa;
   transition: width 0.28s var(--ease);
 }
@@ -1480,7 +1480,7 @@ a.btn:hover {
 .process-steps span {
   font-size: 0.72rem;
   padding: 0.3rem 0.55rem;
-  border-radius: 999px;
+  border-radius: 0;
   border: 1px solid var(--border);
   color: var(--faint);
   font-family: var(--mono);
@@ -1518,7 +1518,7 @@ a.btn:hover {
 .table-wrap {
   overflow: auto;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 4px;
 }
 
 table {
@@ -1549,7 +1549,7 @@ tr:hover td { background: rgba(255, 255, 255, 0.02); }
   font-family: var(--mono);
   font-size: 0.68rem;
   padding: 0.15rem 0.45rem;
-  border-radius: 6px;
+  border-radius: 4px;
   border: 1px solid var(--border);
 }
 
@@ -1582,7 +1582,7 @@ tr:hover td { background: rgba(255, 255, 255, 0.02); }
   width: min(480px, 100%);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: 4px;
   padding: 1.35rem;
   max-height: 90vh;
   overflow: auto;
@@ -1602,7 +1602,7 @@ tr:hover td { background: rgba(255, 255, 255, 0.02); }
   border: 1px solid var(--border-strong);
   color: var(--ink);
   padding: 0.75rem 1.15rem;
-  border-radius: 999px;
+  border-radius: 0;
   font-size: 0.88rem;
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
   max-width: min(92vw, 420px);
@@ -1625,7 +1625,7 @@ tr:hover td { background: rgba(255, 255, 255, 0.02); }
 .hint {
   border: 1px solid var(--border);
   background: var(--bg-elev);
-  border-radius: var(--radius-sm);
+  border-radius: 4px;
   padding: 0.85rem 1rem;
   color: var(--muted);
   font-size: 0.88rem;
@@ -1785,7 +1785,7 @@ select.chip {
   gap: 10px;
   padding: 8px 12px;
   margin: 2px 8px;
-  border-radius: 7px;
+  border-radius: 4px;
   cursor: pointer;
   color: #9ca3af;
   font-size: 0.855rem;
@@ -1870,7 +1870,7 @@ select.chip {
   gap: 9px;
   padding: 7px 8px;
   cursor: pointer;
-  border-radius: 7px;
+  border-radius: 4px;
   transition: background 0.12s;
 }
 
@@ -1971,7 +1971,7 @@ select.chip {
 .dash-card {
   background: #111318;
   border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 10px;
+  border-radius: 4px;
   padding: 22px 22px 18px;
   display: flex;
   flex-direction: column;
@@ -2019,7 +2019,7 @@ select.chip {
   color: var(--ink);
   background: transparent;
   border: 1px solid rgba(255,255,255,0.18);
-  border-radius: 6px;
+  border-radius: 4px;
   cursor: pointer;
   transition: background 0.12s, border-color 0.12s;
   font-family: var(--font);
@@ -2066,7 +2066,7 @@ select.chip {
   z-index: calc(var(--z-nav) + 1);
   background: var(--bg-elev);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 4px;
   padding: 8px;
   cursor: pointer;
   color: var(--ink);

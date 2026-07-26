@@ -317,7 +317,7 @@
         <aside class="sidebar" id="sidebar">
           <div class="sidebar-brand" data-go="dashboard">
             <img class="sidebar-brand-logo" src="/assets/logo.png" alt="zGhost Wave" />
-            <span class="sidebar-brand-name">zzGhost Wave</span>
+            <span class="sidebar-brand-name">zGhost Wave</span>
           </div>
           <nav class="sidebar-nav">
             <button class="sidebar-nav-item" data-go="dashboard">${_navIcon("dashboard")} Dashboard</button>
@@ -611,8 +611,8 @@
       <div class="auth-wrap fade-in">
         <div class="auth-decor" aria-hidden="true"></div>
         <div class="auth-card">
-          <img class="auth-logo" src="/assets/logo_transparent.png" alt="zzGhost Wave" width="96" height="96" />
-          <h1>zzGhost Wave</h1>
+          <img class="auth-logo" src="/assets/logo_transparent.png" alt="zGhost Wave" width="96" height="96" />
+          <h1>zGhost Wave</h1>
           <p class="sub">Humano ouve o original. A IA tende a ler a copy white.</p>
           <div class="auth-lang">${langSelect()}</div>
           <div class="tabs" role="tablist">
@@ -832,7 +832,7 @@
         <div class="page-head">
           <div class="back-row"><button class="btn btn-ghost btn-sm" data-go="dashboard" type="button">← ${t("back")}</button></div>
           <h1 class="h1">Como funciona</h1>
-          <p class="lead">Sem jargão. Pense no zzGhost Wave como um <strong>envelope com duas cartas</strong> no mesmo pacote.</p>
+          <p class="lead">Sem jargão. Pense no zGhost Wave como um <strong>envelope com duas cartas</strong> no mesmo pacote.</p>
         </div>
 
         <div class="tutorial-grid">
@@ -869,7 +869,7 @@
           </div>
           <div class="tutorial-card">
             <h3>Expectativa realista</h3>
-            <p>Nenhuma ferramenta garante 100% para sempre. As IAs mudam. O zzGhost Wave maximiza a chance: <strong>humano ouve black; máquina tende a white</strong>. Sempre teste a legenda na plataforma antes de escalar spend.</p>
+            <p>Nenhuma ferramenta garante 100% para sempre. As IAs mudam. O zGhost Wave maximiza a chance: <strong>humano ouve black; máquina tende a white</strong>. Sempre teste a legenda na plataforma antes de escalar spend.</p>
           </div>
         </div>
 
