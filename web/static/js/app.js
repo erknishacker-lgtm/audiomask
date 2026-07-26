@@ -611,7 +611,7 @@
       <div class="auth-wrap fade-in">
         <div class="auth-decor" aria-hidden="true"></div>
         <div class="auth-card">
-          <img class="auth-logo" src="/assets/logo.png" alt="GhostWave" width="96" height="96" />
+          <img class="auth-logo" src="/assets/logo_transparent.png" alt="GhostWave" width="96" height="96" />
           <h1>GhostWave</h1>
           <p class="sub">Humano ouve o original. A IA tende a ler a copy white.</p>
           <div class="auth-lang">${langSelect()}</div>

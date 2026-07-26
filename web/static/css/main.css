@@ -999,7 +999,6 @@ a.btn:hover {
   height: 96px;
   margin: 0 auto 0.75rem;
   object-fit: contain;
-  background: transparent !important;
   border: none !important;
   border-radius: 0 !important;
   box-shadow: none !important;
